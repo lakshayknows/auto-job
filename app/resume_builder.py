@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+import requests
 
 from app.config import Config, llm_counter
 from app.rag import RAGManager
@@ -51,7 +51,7 @@ Ensure the LaTeX compiles cleanly without errors.
 
 class ResumeBuilder:
     """
-    Resume tailoring system using LangChain and Google Gemini.
+    Resume tailoring system using OpenRouter API.
     
     Features:
     - LaTeX-only output
@@ -63,11 +63,8 @@ class ResumeBuilder:
     def __init__(self):
         Config.ensure_directories()
         self.rag = RAGManager()
-        self.llm = ChatGoogleGenerativeAI(
-            model=Config.LLM_MODEL,
-            google_api_key=Config.GOOGLE_API_KEY,
-            temperature=0.3,
-        )
+        self.api_key = Config.OPENROUTER_API_KEY
+        self.base_url = Config.OPENROUTER_BASE_URL
 
     def _get_job_by_id(self, job_id: str) -> Optional[dict]:
         """Get job details by ID."""
@@ -176,8 +173,23 @@ Description: {job.get('description', '')}
 
         try:
             llm_counter.increment()
-            response = self.llm.invoke(prompt)
-            latex_content = response.content
+            
+            # Call OpenRouter API
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "google/gemini-2.0-flash-001",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.3,
+                },
+                timeout=120,
+            )
+            response.raise_for_status()
+            latex_content = response.json()["choices"][0]["message"]["content"]
 
             # Clean up response (remove markdown code blocks if present)
             latex_content = re.sub(r"^```latex\s*", "", latex_content)
