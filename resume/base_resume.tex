@@ -1,0 +1,165 @@
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tabularx}
+\usepackage{fontawesome5}
+\usepackage{xcolor}
+\input{glyphtounicode}
+
+\definecolor{externallink}{HTML}{3A7BD5}
+
+\addtolength{\oddsidemargin}{-0.55in}
+\addtolength{\textwidth}{1.15in}
+\addtolength{\topmargin}{-.6in}
+\addtolength{\textheight}{1.45in}
+
+\raggedright
+\raggedbottom
+\setlength{\tabcolsep}{0in}
+\pdfgentounicode=1
+
+\setlist[itemize]{noitemsep, topsep=3pt}
+\setlength{\parskip}{0pt}
+
+\titleformat{\section}
+{\vspace{-2pt}\scshape\raggedright\large\bfseries}
+{}{0em}{}[\titlerule \vspace{-4pt}]
+
+\newcommand{\extlink}[2]{\href{#1}{\textcolor{externallink}{#2}}}
+\newcommand{\resumeItem}[1]{\item\small{#1}}
+\newcommand{\certsize}{\fontsize{9.7pt}{11.2pt}\selectfont}
+
+\newcommand{\resumeSubheading}[4]{
+\vspace{-1pt}\item
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\textbf{#1} & #2 \\
+\textit{#3} & \textit{#4}
+\end{tabular*}\vspace{-2pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+\vspace{0pt}\item
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+#1 & #2
+\end{tabular*}\vspace{-2pt}
+}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0pt,label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=14pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}}
+
+\begin{document}
+
+% ================= HEADER =================
+\begin{center}
+{\Huge \scshape Lakshay Handa} \\
+Delhi, India \\
+\faPhone\ 9818575939 ~
+\href{mailto:connect.lakshay@outlook.com}{connect.lakshay@outlook.com} ~
+\extlink{https://www.linkedin.com/in/lakshayhanda}{LinkedIn} ~
+\extlink{https://github.com/lakshayknows}{GitHub} ~
+\extlink{https://lakshayknows.github.io/portfolio/}{Portfolio} ~
+\extlink{https://x.com/lakshayknows}{X}
+\end{center}
+
+% ================= SUMMARY =================
+\section{Summary}
+\small Commerce-trained problem solver turned Rust \& ML engineer building high-performance AI systems that merge business logic with LLMs, agentic workflows, and production-grade pipelines.
+
+% ================= EDUCATION =================
+\section{Education}
+\resumeSubHeadingListStart
+\resumeSubheading
+{University of Delhi}{Expected 2026}
+{Bachelor of Commerce (Honours)}{Delhi}
+\resumeItemListStart
+\resumeItem{Statistics, Mathematics, Financial Management, IT \& Data Analysis}
+\resumeItemListEnd
+\resumeSubHeadingListEnd
+
+% ================= EXPERIENCE =================
+\section{Experience}
+\resumeSubHeadingListStart
+
+\resumeSubheading
+{Prodigy InfoTech}{Nov 2024 -- Dec 2024}
+{Data Science Intern}{Remote}
+\resumeItemListStart
+\resumeItem{Analyzed 45K+ records using Python and pandas.}
+\resumeItem{Built PCA + Decision Tree model achieving 92\% accuracy.}
+\resumeItem{Performed NLP sentiment analysis on 74K+ responses.}
+\resumeItemListEnd
+
+\resumeSubheading
+{\extlink{https://github.com/upes-open/OSoC-25-Askage}{Askage (OSoC’25)}}{Jul 2025 -- Aug 2025}
+{Open Source Contributor}{Remote}
+\resumeItemListStart
+\resumeItem{Implemented authentication and session security.}
+\resumeItem{Built conversation API reducing context errors by 40\%.}
+\resumeItem{Created CLI workflows cutting setup time by 30\%.}
+\resumeItemListEnd
+
+\resumeSubheading
+{French Embassy India}{2023}
+{Volunteer — Choose France Tour}{Delhi}
+\resumeItemListStart
+\resumeItem{Coordinated 1000+ attendees and improved operations by 25\%.}
+\resumeItemListEnd
+
+\resumeSubHeadingListEnd
+
+% ================= PROJECTS =================
+\section{Projects}
+\resumeSubHeadingListStart
+
+\resumeProjectHeading
+{\extlink{https://github.com/git-ksupriya/MisSpoke}{\textbf{MisSpoke — Voice-First AI Tutor}}}{2025}
+\resumeItemListStart
+\resumeItem{Built real-time speech → LLM → speech pipeline using Agora.}
+\resumeItem{Achieved sub-400ms latency via async streaming orchestration.}
+\resumeItem{Designed agent-based tutoring dialogue system.}
+\resumeItemListEnd
+
+\resumeProjectHeading
+{\extlink{https://fraud-detection-lakshay.streamlit.app/}{\textbf{Fraud Detection System (6.2M+ transactions)}}}{2024}
+\resumeItemListStart
+\resumeItem{Trained Logistic Regression, Decision Tree and XGBoost models.}
+\resumeItem{Reached 99.95\% accuracy after F1-optimized tuning.}
+\resumeItemListEnd
+
+\resumeProjectHeading
+{\extlink{https://github.com/lakshayknows/sentiment-analysis-the_exorcist_series}{\textbf{Sentiment Analysis — Exorcist Reviews}}}{2024}
+\resumeItemListStart
+\resumeItem{Built zero-shot and few-shot LLM classifiers on 500+ reviews.}
+\resumeItem{Reduced misclassification by 40\% via prompt engineering.}
+\resumeItemListEnd
+
+\resumeSubHeadingListEnd
+
+% ================= TECH STACK =================
+\section{Technical Stack}
+\small
+\textbf{Languages:} Python, Rust \\
+\textbf{ML \& LLMs:} NLP, Deep Learning, Prompt Engineering, RAG, Agentic AI \\
+\textbf{Libraries:} NumPy, pandas, scikit-learn, TensorFlow, LangChain, Hugging Face \\
+\textbf{Data \& Infra:} MySQL, MongoDB, Streamlit, Docker, Git
+
+% ================= CERTIFICATIONS =================
+\section{Certifications}
+\nopagebreak
+{\certsize
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ll}
+\extlink{https://www.kaggle.com/learn/certification/lakshaykahai/python}{\textbf{Kaggle Python}} & Data science foundations \\
+\extlink{https://drive.google.com/file/d/1XFrJm6LS5ztjU2UIZIyCXyhXXaNCAaXh/view}{\textbf{Vista AI}} & Applied LLM workflows \\
+\extlink{https://drive.google.com/file/d/10KJdQa2t_QDAzvfAr6Fn8dv3PYCGTx3K/view}{\textbf{GDG HackFest Runner-Up}} & Global hackathon finalist \\
+\extlink{https://drive.google.com/file/d/1_pu39yxgcA5obRQqN0DNM2i2JbiyRavy/view}{\textbf{21 ML Projects}} & Hands-on ML \& GenAI \\
+\extlink{https://drive.google.com/file/d/1ic4SuH7e7_1hRjOPZOw8oLlzvMey7onj/view}{\textbf{OSoC’25}} & Open-source contributor
+\end{tabular*}
+}
+
+\end{document}
