@@ -30,7 +30,7 @@ Draft a concise, respectful cold email aligned to the job role.
 # LIMITS
 - DO NOT sound automated
 - DO NOT exaggerate experience
-- Maximum 120 words
+- Maximum 250 words
 - Be concise
 - Avoid unnecessary verbosity
 - Prefer structured output over prose
@@ -237,7 +237,7 @@ class EmailGenerator:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "google/gemini-2.0-flash-001",
+                    "model": "mistralai/mistral-small-creative",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
                 },

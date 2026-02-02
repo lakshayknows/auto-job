@@ -182,7 +182,7 @@ Description: {job.get('description', '')}
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "google/gemini-2.0-flash-001",
+                    "model": "deepseek/deepseek-chat-v3.1",
                     "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.3,
                 },
