@@ -1,271 +1,367 @@
-"""
-Main orchestrator for the job automation system.
-Provides CLI commands for all operations.
+"""CLI entrypoint for AutoJob Agent.
+
+Provides command-line interface for:
+- Discovering jobs
+- Processing job applications
+- Approving/rejecting pending applications
+- Viewing status
 """
 
 import argparse
+import json
 import sys
+from pathlib import Path
 
-from app.approval import ApprovalManager
-from app.config import Config, llm_counter
-from app.email_generator import EmailGenerator
-from app.mailer import Mailer
-from app.rag import RAGManager
-from app.resume_builder import ResumeBuilder
-from app.scraper import JobScraper
+from app.config import DATA_DIR, get_config, get_logger, setup_logging
+from app.graph import get_app
+from app.nodes.approval import approve_job, list_pending_approvals, reject_job
+from app.state import create_initial_state
 
-
-def cmd_scrape(args) -> None:
-    """Run the job scraper."""
-    print("\n=== JOB SCRAPER ===\n")
-
-    scraper = JobScraper()
-    scraper.run(
-        greenhouse_boards=args.greenhouse if args.greenhouse else None,
-        lever_boards=args.lever if args.lever else None,
-    )
+logger = get_logger("main")
 
 
-def cmd_index(args) -> None:
-    """Build or update RAG index."""
-    if Config.CRON_MODE:
-        print("CRON_MODE is enabled. RAG indexing skipped.")
-        return
+def load_jobs() -> list[dict]:
+    """Load discovered jobs from file.
 
-    print("\n=== RAG INDEX ===\n")
-
-    rag = RAGManager()
-    result = rag.build_index()
-
-    print(f"\nIndexing results:")
-    print(f"  Jobs indexed: {result['jobs_indexed']}")
-    print(f"  Resume indexed: {result['resume_indexed']}")
+    Returns:
+        List of job dictionaries
+    """
+    jobs_file = DATA_DIR / "jobs.json"
+    if jobs_file.exists():
+        with open(jobs_file, "r") as f:
+            return json.load(f)
+    return []
 
 
-def cmd_generate(args) -> None:
-    """Generate tailored resumes and email drafts."""
-    if Config.CRON_MODE:
-        print("CRON_MODE is enabled. Generation skipped.")
-        return
+def cmd_discover(args):
+    """Discover jobs from legal sources."""
+    logger.info("Starting job discovery...")
 
-    print("\n=== CONTENT GENERATION ===\n")
+    app = get_app()
+    config = {"configurable": {"thread_id": "discovery"}}
 
-    # First, ensure RAG index is built
-    print("Checking RAG index...")
-    rag = RAGManager()
-    rag.build_index()
+    # Run scraper node only
+    initial_state = {
+        "job_id": "",
+        "job_data": {},
+        "errors": [],
+        "llm_calls": 0,
+        "total_tokens": 0,
+    }
 
-    # Generate resumes
-    print("\n--- RESUMES ---")
-    resume_builder = ResumeBuilder()
-    resume_results = resume_builder.tailor_all_resumes(force=args.force)
+    # The scraper will save jobs to jobs.json
+    from app.nodes.scraper import scrape_jobs
 
-    print(f"\nResume results:")
-    print(f"  Total: {resume_results['total']}")
-    print(f"  Generated: {resume_results['success']}")
-    print(f"  Cached: {resume_results['cached']}")
-    print(f"  Failed: {resume_results['failed']}")
+    result = scrape_jobs(initial_state)
 
-    # Check LLM limit before continuing
-    if not llm_counter.can_call():
-        print("\nLLM call limit reached. Email generation skipped.")
-        return
+    jobs = load_jobs()
+    print(f"\nDiscovered {len(jobs)} jobs")
 
-    # Generate email drafts
-    print("\n--- EMAILS ---")
-    email_generator = EmailGenerator()
-    email_results = email_generator.generate_all_emails(force=args.force)
+    for i, job in enumerate(jobs[:10], 1):
+        email_status = "✓" if job.get("contact_email") else "✗"
+        print(f"  {i}. [{email_status}] {job.get('company')} - {job.get('role')}")
 
-    print(f"\nEmail results:")
-    print(f"  Total: {email_results['total']}")
-    print(f"  Generated: {email_results['success']}")
-    print(f"  Cached: {email_results['cached']}")
-    print(f"  Failed: {email_results['failed']}")
-
-    print(f"\nLLM calls used: {llm_counter.count}/{llm_counter.max_calls}")
+    if len(jobs) > 10:
+        print(f"  ... and {len(jobs) - 10} more")
 
 
-def cmd_review(args) -> None:
-    """Interactive approval review."""
-    print("\n=== APPROVAL REVIEW ===\n")
+def find_job_by_id(jobs: list[dict], job_id: str) -> dict | None:
+    """Find job by full or partial ID.
 
-    approval_manager = ApprovalManager()
+    Args:
+        jobs: List of job dictionaries
+        job_id: Full or partial job ID
 
-    # Show summary
-    summary = approval_manager.summary()
-    print("Current status:")
-    for status, count in summary.items():
-        print(f"  {status.title()}: {count}")
+    Returns:
+        Job dict or None
+    """
+    # Try exact match first
+    job = next((j for j in jobs if j["id"] == job_id), None)
+    if job:
+        return job
 
-    if args.list:
-        # Just list pending
-        pending = approval_manager.list_pending()
-        if pending:
-            print(f"\nPending drafts ({len(pending)}):")
-            for draft in pending:
-                print(f"  - {draft['id'][:8]}... | {draft['company']} | {draft['role']}")
-        return
+    # Try partial match (prefix)
+    job = next((j for j in jobs if j["id"].startswith(job_id)), None)
+    return job
 
-    if args.approve:
-        approval_manager.approve(args.approve)
-        return
 
-    if args.reject:
-        reason = args.reason if args.reason else ""
-        approval_manager.reject(args.reject, reason)
-        return
+def cmd_process(args):
+    """Process a specific job application."""
+    job_id = args.job_id
+    logger.info(f"Processing job: {job_id}")
 
-    # Interactive review
-    if approval_manager.list_pending():
-        approval_manager.interactive_review()
+    # Load jobs
+    jobs = load_jobs()
+    job = find_job_by_id(jobs, job_id)
+
+    if not job:
+        print(f"Job not found: {job_id}")
+        return 1
+
+    # Create initial state
+    state = create_initial_state(job_id, job)
+
+    # Get graph and run
+    app = get_app()
+    config = {"configurable": {"thread_id": job_id}}
+
+    print(f"\nProcessing: {job.get('company')} - {job.get('role')}")
+    print(f"Contact: {job.get('contact_email', 'N/A')}")
+    print("-" * 50)
+
+    # Run graph until interrupt or completion
+    for event in app.stream(state, config):
+        if isinstance(event, tuple):
+            # Some versions return (node, output) tuple
+            node, output = event
+            status = output.get("approval_status", "N/A")
+            errors = output.get("errors", [])
+            print(f"  [{node}] status={status}, errors={len(errors)}")
+        elif isinstance(event, dict):
+            # Others return dict {node: output}
+            for node, output in event.items():
+                if node == "__end__":
+                    continue
+                status = output.get("approval_status", "N/A")
+                errors = output.get("errors", [])
+                print(f"  [{node}] status={status}, errors={len(errors)}")
+
+    # Get final state
+    final_state = app.get_state(config)
+    print("-" * 50)
+
+    if final_state.values.get("approval_status") == "PENDING":
+        print("\n⏸️  Waiting for approval. Use 'approve' or 'reject' command.")
+    elif final_state.values.get("sent"):
+        print("\n✅ Email sent successfully!")
+    elif final_state.values.get("errors"):
+        print(f"\n❌ Errors: {final_state.values['errors']}")
+
+
+def cmd_approve(args):
+    """Approve a pending job application."""
+    job_id = args.job_id
+    notes = args.notes or ""
+
+    if approve_job(job_id, notes):
+        print(f"✅ Approved: {job_id}")
+
+        # Resume processing
+        if args.resume:
+            args.job_id = job_id
+            cmd_process(args)
     else:
-        print("\nNo pending emails to review.")
+        print(f"❌ Failed to approve: {job_id}")
 
 
-def cmd_send(args) -> None:
-    """Send approved emails."""
-    if Config.CRON_MODE:
-        print("CRON_MODE is enabled. Email sending blocked.")
+def cmd_reject(args):
+    """Reject a pending job application."""
+    job_id = args.job_id
+    reason = args.reason or ""
+
+    if reject_job(job_id, reason):
+        print(f"❌ Rejected: {job_id}")
+    else:
+        print(f"Failed to reject: {job_id}")
+
+
+def cmd_pending(args):
+    """List pending approval requests."""
+    pending = list_pending_approvals()
+
+    if not pending:
+        print("No pending approvals")
         return
 
-    print("\n=== EMAIL SENDING ===\n")
+    print(f"\nPending Approvals ({len(pending)}):")
+    print("-" * 50)
 
-    mailer = Mailer()
+    jobs = load_jobs()
+    for record in pending:
+        job_id = record["job_id"]
+        job = next((j for j in jobs if j["id"] == job_id), {})
+        company = job.get("company", "Unknown")
+        role = job.get("role", "Unknown")
+        print(f"  {job_id[:8]}... | {company} - {role}")
 
-    if args.id:
-        # Send specific email
-        mailer.send_email(args.id)
-    else:
-        # Send all approved
-        mailer.send_approved()
+
+def cmd_status(args):
+    """Show overall status."""
+    config = get_config()
+    jobs = load_jobs()
+    pending = list_pending_approvals()
+
+    # Load sent emails
+    sent_file = DATA_DIR / "sent_emails.json"
+    sent_count = 0
+    if sent_file.exists():
+        with open(sent_file, "r") as f:
+            sent_count = len(json.load(f))
+
+    # Load archive
+    archive_file = DATA_DIR / "archive.json"
+    archive_count = 0
+    if archive_file.exists():
+        with open(archive_file, "r") as f:
+            archive_count = len(json.load(f))
+
+    print("\n" + "=" * 50)
+    print("AutoJob Agent Status")
+    print("=" * 50)
+    print(f"  CRON_MODE: {'🔴 Active' if config.cron_mode else '🟢 Inactive'}")
+    print(f"  Jobs Discovered: {len(jobs)}")
+    print(f"  Pending Approvals: {len(pending)}")
+    print(f"  Emails Sent: {sent_count}")
+    print(f"  Archived: {archive_count}")
+    print("=" * 50)
 
 
-def cmd_status(args) -> None:
-    """Show system status."""
-    print("\n=== SYSTEM STATUS ===\n")
+def cmd_list(args):
+    """List discovered jobs."""
+    jobs = load_jobs()
 
-    # Config status
-    print("Configuration:")
-    print(f"  CRON_MODE: {Config.CRON_MODE}")
-    print(f"  MAX_LLM_CALLS: {Config.MAX_LLM_CALLS_PER_RUN}")
-    print(f"  Google API Key: {'Set' if Config.GOOGLE_API_KEY else 'NOT SET'}")
-    print(f"  SMTP Password: {'Set' if Config.SMTP_PASSWORD else 'NOT SET'}")
+    if not jobs:
+        print("No jobs discovered. Run 'discover' first.")
+        return
 
-    # Data status
-    print("\nData files:")
-    print(f"  jobs.json: {'Exists' if Config.JOBS_JSON.exists() else 'Not found'}")
-    print(f"  contacts.json: {'Exists' if Config.CONTACTS_JSON.exists() else 'Not found'}")
-    print(f"  approvals.json: {'Exists' if Config.APPROVALS_JSON.exists() else 'Not found'}")
+    print(f"\nDiscovered Jobs ({len(jobs)}):")
+    print("-" * 70)
+    print(f"{'ID':<10} {'Company':<20} {'Role':<25} {'Email':<15}")
+    print("-" * 70)
 
-    # Count records
-    import json
+    for job in jobs[:args.limit]:
+        job_id = job["id"][:8]
+        company = job.get("company", "")[:18]
+        role = job.get("role", "")[:23]
+        email = "✓" if job.get("contact_email") else "✗"
+        print(f"{job_id:<10} {company:<20} {role:<25} {email:<15}")
 
-    if Config.JOBS_JSON.exists():
-        with open(Config.JOBS_JSON, "r") as f:
-            jobs = json.load(f)
-        print(f"  Jobs count: {len(jobs)}")
-
-    if Config.CONTACTS_JSON.exists():
-        with open(Config.CONTACTS_JSON, "r") as f:
-            contacts = json.load(f)
-        print(f"  Contacts count: {len(contacts)}")
-
-    # Approval status
-    approval_manager = ApprovalManager()
-    summary = approval_manager.summary()
-    print("\nApproval status:")
-    for status, count in summary.items():
-        print(f"  {status.title()}: {count}")
-
-    # Resume status
-    compiled_resumes = list(Config.COMPILED_RESUME_DIR.glob("*.pdf"))
-    print(f"\nCompiled resumes: {len(compiled_resumes)}")
+    if len(jobs) > args.limit:
+        print(f"\n... and {len(jobs) - args.limit} more (use --limit to see more)")
 
 
 def main():
-    """Main entry point with CLI argument parsing."""
+    """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Job Automation System - Legal & Approval-Gated",
+        description="AutoJob Agent - Automated Job Application System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python -m app.main scrape                    # Scrape jobs from RemoteOK
-  python -m app.main scrape --greenhouse figma # Scrape Greenhouse board
-  python -m app.main index                     # Build RAG index
-  python -m app.main generate                  # Generate resumes & emails
-  python -m app.main review                    # Interactive approval
-  python -m app.main send                      # Send approved emails
-  python -m app.main status                    # Show system status
-        """,
     )
 
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
-
-    # Scrape command
-    scrape_parser = subparsers.add_parser("scrape", help="Scrape job listings")
-    scrape_parser.add_argument(
-        "--greenhouse",
-        nargs="*",
-        help="Greenhouse board IDs to scrape (e.g., figma stripe)",
-    )
-    scrape_parser.add_argument(
-        "--lever", nargs="*", help="Lever company slugs to scrape"
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
     )
 
-    # Index command
-    subparsers.add_parser("index", help="Build/update RAG index")
+    subparsers = parser.add_subparsers(dest="command", help="Commands")
 
-    # Generate command
-    generate_parser = subparsers.add_parser(
-        "generate", help="Generate resumes and emails"
-    )
-    generate_parser.add_argument(
-        "--force", action="store_true", help="Force regeneration of cached items"
+    # Discover command
+    discover_parser = subparsers.add_parser(
+        "discover",
+        help="Discover jobs from legal sources",
     )
 
-    # Review command
-    review_parser = subparsers.add_parser("review", help="Review and approve emails")
-    review_parser.add_argument(
-        "--list", action="store_true", help="List pending drafts only"
+    # List command
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List discovered jobs",
     )
-    review_parser.add_argument("--approve", help="Approve a specific draft ID")
-    review_parser.add_argument("--reject", help="Reject a specific draft ID")
-    review_parser.add_argument("--reason", help="Rejection reason")
+    list_parser.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="Max jobs to display",
+    )
 
-    # Send command
-    send_parser = subparsers.add_parser("send", help="Send approved emails")
-    send_parser.add_argument("--id", help="Send a specific draft ID")
+    # Process command
+    process_parser = subparsers.add_parser(
+        "process",
+        help="Process a job application",
+    )
+    process_parser.add_argument(
+        "job_id",
+        help="Job ID to process",
+    )
+
+    # Approve command
+    approve_parser = subparsers.add_parser(
+        "approve",
+        help="Approve a pending application",
+    )
+    approve_parser.add_argument(
+        "job_id",
+        help="Job ID to approve",
+    )
+    approve_parser.add_argument(
+        "--notes",
+        help="Approval notes",
+    )
+    approve_parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume processing after approval",
+    )
+
+    # Reject command
+    reject_parser = subparsers.add_parser(
+        "reject",
+        help="Reject a pending application",
+    )
+    reject_parser.add_argument(
+        "job_id",
+        help="Job ID to reject",
+    )
+    reject_parser.add_argument(
+        "--reason",
+        help="Rejection reason",
+    )
+
+    # Pending command
+    pending_parser = subparsers.add_parser(
+        "pending",
+        help="List pending approvals",
+    )
 
     # Status command
-    subparsers.add_parser("status", help="Show system status")
+    status_parser = subparsers.add_parser(
+        "status",
+        help="Show overall status",
+    )
 
     args = parser.parse_args()
 
-    if not args.command:
-        parser.print_help()
-        sys.exit(1)
+    # Setup logging
+    setup_logging()
 
-    # Ensure directories exist
-    Config.ensure_directories()
+    if args.debug:
+        import logging
 
-    # Route to appropriate command
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    # Route to command
     commands = {
-        "scrape": cmd_scrape,
-        "index": cmd_index,
-        "generate": cmd_generate,
-        "review": cmd_review,
-        "send": cmd_send,
+        "discover": cmd_discover,
+        "list": cmd_list,
+        "process": cmd_process,
+        "approve": cmd_approve,
+        "reject": cmd_reject,
+        "pending": cmd_pending,
         "status": cmd_status,
     }
 
-    try:
-        commands[args.command](args)
-    except KeyboardInterrupt:
-        print("\n\nOperation cancelled.")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\nError: {e}")
-        sys.exit(1)
+    if args.command in commands:
+        try:
+            result = commands[args.command](args)
+            sys.exit(result or 0)
+        except KeyboardInterrupt:
+            print("\nInterrupted")
+            sys.exit(1)
+        except Exception as e:
+            logger.exception("Command failed")
+            print(f"\n❌ Error: {e}")
+            sys.exit(1)
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

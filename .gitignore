@@ -36,8 +36,8 @@ env/
 # Environment
 .env
 
-# Prompts (internal use)
-prompts/
+# Prompts (internal use) - NOW TRACKED
+# prompts/
 
 # LaTeX auxiliary files
 *.aux
@@ -65,3 +65,10 @@ data/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Streamlit UI (local testing only) - NOW TRACKED
+# ui/
+
+# Development artifacts
+debug_email.py
+status_output.txt

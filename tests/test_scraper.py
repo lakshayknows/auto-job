@@ -1,79 +1,88 @@
-"""
-Test scraper module.
-Verify: ≤100 jobs, required fields, no LinkedIn, no empty descriptions.
-"""
+"""Tests for scraper node."""
 
-import json
 import pytest
-from pathlib import Path
 
-from app.scraper import JobScraper
-from app.config import Config
+from app.nodes.scraper import (
+    extract_emails_from_text,
+    is_allowed_domain,
+    is_valid_email_prefix,
+)
 
 
-class TestScraper:
-    """Test suite for job scraper."""
+class TestEmailExtraction:
+    """Test email extraction functions."""
 
-    def test_max_100_jobs(self, tmp_path, monkeypatch):
-        """Verify ≤100 jobs are scraped."""
-        monkeypatch.setattr(Config, "DATA_DIR", tmp_path)
-        monkeypatch.setattr(Config, "JOBS_JSON", tmp_path / "jobs.json")
-        
-        scraper = JobScraper()
-        jobs = scraper.scrape_remoteok()
-        
-        assert len(jobs) <= 100, f"Scraped {len(jobs)} jobs, expected ≤100"
+    def test_extract_emails_basic(self):
+        """Test basic email extraction."""
+        text = "Contact us at careers@example.com for opportunities"
+        emails = extract_emails_from_text(text)
+        assert "careers@example.com" in emails
 
-    def test_required_fields_exist(self, tmp_path, monkeypatch):
-        """Verify all required fields exist in scraped jobs."""
-        monkeypatch.setattr(Config, "DATA_DIR", tmp_path)
-        monkeypatch.setattr(Config, "JOBS_JSON", tmp_path / "jobs.json")
-        
-        scraper = JobScraper()
-        jobs = scraper.scrape_remoteok()
-        
-        required_fields = ["id", "company", "role", "description", "url", "scraped_at", "source"]
-        
-        for job in jobs[:5]:  # Check first 5 jobs
-            for field in required_fields:
-                assert field in job, f"Missing required field: {field}"
-                assert job[field] is not None, f"Field {field} is None"
+    def test_extract_multiple_emails(self):
+        """Test extracting multiple emails."""
+        text = """
+        HR: hr@company.com
+        Jobs: jobs@company.com
+        """
+        emails = extract_emails_from_text(text)
+        assert len(emails) == 2
+        assert "hr@company.com" in emails
+        assert "jobs@company.com" in emails
 
-    def test_no_linkedin_urls(self, tmp_path, monkeypatch):
-        """Verify no LinkedIn URLs in scraped jobs."""
-        monkeypatch.setattr(Config, "DATA_DIR", tmp_path)
-        monkeypatch.setattr(Config, "JOBS_JSON", tmp_path / "jobs.json")
-        
-        scraper = JobScraper()
-        jobs = scraper.scrape_remoteok()
-        
-        for job in jobs:
-            url = job.get("url", "").lower()
-            assert "linkedin.com" not in url, f"LinkedIn URL found: {url}"
+    def test_extract_no_emails(self):
+        """Test text with no emails."""
+        text = "No emails here, just text."
+        emails = extract_emails_from_text(text)
+        assert len(emails) == 0
 
-    def test_no_empty_descriptions(self, tmp_path, monkeypatch):
-        """Verify no empty job descriptions."""
-        monkeypatch.setattr(Config, "DATA_DIR", tmp_path)
-        monkeypatch.setattr(Config, "JOBS_JSON", tmp_path / "jobs.json")
-        
-        scraper = JobScraper()
-        jobs = scraper.scrape_remoteok()
-        
-        for job in jobs[:10]:  # Check first 10 jobs
-            desc = job.get("description", "")
-            assert len(desc) > 0, f"Empty description for job {job.get('id')}"
 
-    def test_save_results_creates_files(self, tmp_path, monkeypatch):
-        """Verify save_results creates JSON and CSV files."""
-        monkeypatch.setattr(Config, "DATA_DIR", tmp_path)
-        monkeypatch.setattr(Config, "JOBS_JSON", tmp_path / "jobs.json")
-        monkeypatch.setattr(Config, "JOBS_CSV", tmp_path / "jobs.csv")
-        monkeypatch.setattr(Config, "CONTACTS_JSON", tmp_path / "contacts.json")
-        monkeypatch.setattr(Config, "CONTACTS_CSV", tmp_path / "contacts.csv")
-        
-        scraper = JobScraper()
-        scraper.jobs = [{"id": "test", "company": "Test", "role": "Dev", "description": "Test job"}]
-        scraper.save_results()
-        
-        assert (tmp_path / "jobs.json").exists(), "jobs.json not created"
-        assert (tmp_path / "jobs.csv").exists(), "jobs.csv not created"
+class TestEmailValidation:
+    """Test email prefix validation."""
+
+    def test_valid_careers_email(self):
+        """Test careers@ email is valid."""
+        assert is_valid_email_prefix("careers@example.com") is True
+
+    def test_valid_jobs_email(self):
+        """Test jobs@ email is valid."""
+        assert is_valid_email_prefix("jobs@example.com") is True
+
+    def test_valid_hr_email(self):
+        """Test hr@ email is valid."""
+        assert is_valid_email_prefix("hr@example.com") is True
+
+    def test_valid_hiring_email(self):
+        """Test hiring@ email is valid."""
+        assert is_valid_email_prefix("hiring@example.com") is True
+
+    def test_invalid_personal_email(self):
+        """Test personal email is invalid."""
+        assert is_valid_email_prefix("john@example.com") is False
+
+    def test_invalid_random_email(self):
+        """Test random email is invalid."""
+        assert is_valid_email_prefix("random123@example.com") is False
+
+
+class TestDomainValidation:
+    """Test domain validation."""
+
+    def test_allowed_domain(self):
+        """Test allowed domain."""
+        assert is_allowed_domain("https://example.com/careers") is True
+
+    def test_blocked_linkedin(self):
+        """Test LinkedIn is blocked."""
+        assert is_allowed_domain("https://linkedin.com/in/user") is False
+
+    def test_blocked_facebook(self):
+        """Test Facebook is blocked."""
+        assert is_allowed_domain("https://facebook.com/company") is False
+
+    def test_blocked_twitter(self):
+        """Test Twitter is blocked."""
+        assert is_allowed_domain("https://twitter.com/user") is False
+
+    def test_allowed_company_site(self):
+        """Test company site is allowed."""
+        assert is_allowed_domain("https://tech-company.io/jobs") is True

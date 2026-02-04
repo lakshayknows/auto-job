@@ -1,1 +1,0 @@
-0 9 * * MON cd /app && python -m app.main scrape >> /var/log/cron.log 2>&1

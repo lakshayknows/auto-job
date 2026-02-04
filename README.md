@@ -1,196 +1,199 @@
-# Job Automation System
+# AutoJob Agent
 
-A production-grade, legal, and approval-gated job automation system that scrapes job listings, tailors resumes using RAG, drafts personalized cold emails, and sends only after explicit human approval.
+A LangGraph-powered automated job application system that discovers jobs, tailors resumes, drafts emails, and sends applications with human-in-the-loop approval.
 
 ## Features
 
-- **Legal Scraping**: Only scrapes public job boards (RemoteOK, Greenhouse, Lever ATS)
-- **Public Email Discovery**: Extracts only publicly visible hiring emails (careers@, jobs@, hiring@, hr@)
-- **RAG-Powered Personalization**: Uses LangChain + Google Gemini for context-aware generation
-- **LaTeX Resumes**: Generates tailored `.tex` files compiled to PDF via pdflatex
-- **Approval Gate**: Tri-state approval system (PENDING/APPROVED/REJECTED) - no auto-sending
-- **Cost Optimization**: Hash-based caching, lazy loading, configurable LLM call limits
-- **Docker + Cron**: Automated weekly scraping (cron never triggers sending)
+- **Job Discovery**: Scrapes legal public sources (RemoteOK, Hacker News)
+- **Email Extraction**: Discovers public company contact emails
+- **RAG-Powered Tailoring**: Uses vector search to match resume to job requirements
+- **Resume Generation**: Tailors LaTeX resumes for specific roles
+- **Email Drafting**: Generates professional cold emails (≤200 words)
+- **Human Approval**: LangGraph interrupt mechanism for review before sending
+- **SMTP Integration**: Sends emails via Outlook with resume attachment
+
+## Architecture
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Scraper   │────▶│ Legal Guard  │────▶│     RAG     │
+└─────────────┘     └──────────────┘     └─────────────┘
+                                                │
+                    ┌──────────────┐     ┌──────▼──────┐
+                    │   Approval   │◀────│   Resume    │
+                    │  (Interrupt) │     │   Tailor    │
+                    └──────────────┘     └─────────────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+        ┌──────────┐ ┌──────────┐ ┌──────────┐
+        │ Approved │ │ Rejected │ │ Pending  │
+        └────┬─────┘ └────┬─────┘ └────┬─────┘
+             │            │            │
+             ▼            ▼            ▼
+        ┌──────────┐ ┌──────────┐    (Wait)
+        │  Send    │ │ Archive  │
+        │  Guard   │ └──────────┘
+        └────┬─────┘
+             │
+             ▼
+        ┌──────────┐
+        │   SMTP   │
+        │   Send   │
+        └──────────┘
+```
 
 ## Quick Start
 
-### 1. Clone & Setup
+### 1. Setup Environment
 
 ```bash
-git clone https://github.com/lakshayknows/auto-job.git
-cd auto-job
-```
+# Clone repository
+git clone https://github.com/lakshayknows/autojob-agent.git
+cd autojob-agent
 
-### 2. Configure Environment
+# Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/Mac
 
-```bash
-cp .env.example .env
-# Edit .env with your credentials
-```
-
-Required environment variables:
-```
-GOOGLE_API_KEY=your_google_gemini_api_key
-SMTP_EMAIL=your_outlook_email
-SMTP_PASSWORD=your_outlook_app_password
-```
-
-### 3. Install Dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your API keys
 ```
 
-### 4. Install LaTeX (for PDF compilation)
+### 2. Configure API Keys
 
-**Windows:**
-```bash
-choco install miktex
+Edit `.env`:
+```
+GOOGLE_API_KEY=your_gemini_api_key
+SMTP_EMAIL=your_email@outlook.com
+SMTP_PASSWORD=your_app_password
 ```
 
-**macOS:**
-```bash
-brew install --cask mactex-no-gui
-```
-
-**Linux:**
-```bash
-apt-get install texlive-latex-base texlive-fonts-recommended texlive-latex-extra
-```
-
-## Usage
-
-### Full Workflow
+### 3. Run Commands
 
 ```bash
-# 1. Scrape jobs from public boards
-python -m app.main scrape
+# Discover jobs from legal sources
+python -m app.main discover
 
-# 2. Build RAG index (embeds jobs + resume)
-python -m app.main index
+# List discovered jobs
+python -m app.main list
 
-# 3. Generate tailored resumes and email drafts
-python -m app.main generate
+# Process a specific job
+python -m app.main process <job_id>
 
-# 4. Review and approve emails interactively
-python -m app.main review
+# View pending approvals
+python -m app.main pending
 
-# 5. Send approved emails (with per-email confirmation)
-python -m app.main send
-```
+# Approve an application
+python -m app.main approve <job_id> --resume
 
-### Individual Commands
+# Reject an application
+python -m app.main reject <job_id> --reason "Not a good fit"
 
-```bash
-# Check system status
+# Check status
 python -m app.main status
-
-# Scrape specific boards
-python -m app.main scrape --greenhouse figma stripe
-python -m app.main scrape --lever netflix spotify
-
-# Force regeneration (ignores cache)
-python -m app.main generate --force
-
-# List pending drafts without interactive review
-python -m app.main review --list
-
-# Approve/reject specific draft
-python -m app.main review --approve <draft_id>
-python -m app.main review --reject <draft_id> --reason "Not relevant"
-
-# Send specific email
-python -m app.main send --id <draft_id>
 ```
 
 ## Project Structure
 
 ```
 job-agent/
-├── app/                    # Python application code
-│   ├── config.py           # Configuration & environment loading
-│   ├── scraper.py          # Job scraping from public boards
-│   ├── rag.py              # LangChain RAG with FAISS
-│   ├── resume_builder.py   # LaTeX resume tailoring
-│   ├── email_generator.py  # Cold email draft generation
-│   ├── approval.py         # Approval gate system
-│   ├── mailer.py           # SMTP email sender
-│   └── main.py             # CLI orchestrator
+├── app/
+│   ├── __init__.py
+│   ├── config.py          # Configuration management
+│   ├── state.py           # State model (TypedDict)
+│   ├── graph.py           # LangGraph workflow
+│   ├── main.py            # CLI entrypoint
+│   └── nodes/
+│       ├── scraper.py     # Job discovery
+│       ├── guards.py      # Legal/send guards
+│       ├── rag.py         # RAG context retrieval
+│       ├── resume.py      # Resume tailoring
+│       ├── email.py       # Email drafting
+│       ├── approval.py    # Human approval
+│       └── sender.py      # SMTP sending
+├── prompts/               # LLM prompt files
 ├── resume/
-│   └── base_resume.tex     # Your base resume template
-├── Dockerfile              # Docker configuration
-├── requirements.txt        # Python dependencies
-├── cronjob                 # Cron schedule configuration
-└── .env.example            # Environment template
+│   ├── base_resume.tex    # Your base resume
+│   └── compiled/          # Generated PDFs
+├── data/                  # Runtime data
+├── tests/                 # Test suite
+├── Dockerfile
+├── requirements.txt
+└── .env.example
 ```
 
-### Generated Directories (gitignored)
+## Safety Features
 
-```
-├── data/                   # Scraped jobs, contacts, approvals (JSON/CSV)
-├── cache/                  # Embeddings, resumes, emails cache
-├── rag_index/              # FAISS vector stores
-└── resume/compiled/        # Generated PDF resumes
+### Legal Compliance
+- ✅ No LinkedIn scraping
+- ✅ No personal profile scraping
+- ✅ Respect robots.txt
+- ✅ Rate-limited HTTP calls
+- ✅ Public APIs only
+
+### Human-in-the-Loop
+- ✅ Approval required before sending
+- ✅ All decisions logged
+- ✅ CRON_MODE blocks LLM and sending
+
+### Cost Control
+- ✅ LLM call limits
+- ✅ Token usage tracking
+- ✅ Resume/email caching
+- ✅ Skip if outputs exist
+
+## Development
+
+### Run Tests
+
+```bash
+pytest tests/ -v
 ```
 
-## Docker Deployment
+### Code Quality
+
+```bash
+# Format code
+black app/ tests/
+isort app/ tests/
+
+# Lint
+flake8 app/ tests/
+
+# Security scan
+bandit -r app -ll
+
+# Dependency audit
+pip-audit
+```
+
+### Docker
 
 ```bash
 # Build image
 docker build -t job-agent .
 
-# Run with cron (scraping only, no sending)
-docker run -d --name job-agent job-agent
-
-# Run one-off commands
-docker run --rm job-agent python -m app.main status
-
-# View cron logs
-docker exec job-agent cat /var/log/cron.log
+# Run container
+docker run --env-file .env job-agent status
 ```
 
-## Safety & Compliance
+## Environment Variables
 
-| Feature | Guarantee |
-|---------|-----------|
-| **No LinkedIn scraping** | Only public job boards and company pages |
-| **No email guessing** | Only extracts publicly visible emails |
-| **No auto-sending** | Emails require explicit APPROVED status |
-| **CRON_MODE** | When enabled, blocks LLM calls and email sending |
-| **LLM limits** | Configurable MAX_LLM_CALLS_PER_RUN (default: 25) |
-| **Per-email confirmation** | Even approved emails require send confirmation |
-
-## Cost Optimization
-
-- **Hash-based embedding cache**: Never re-embeds unchanged content
-- **Lazy generation**: Skips if resume/email already exists for job
-- **Incremental indexing**: Only indexes new documents
-- **Configurable limits**: Set MAX_LLM_CALLS_PER_RUN in .env
-
-## Troubleshooting
-
-### "No module found" errors
-```bash
-pip install langchain-core langchain-google-genai langchain-community faiss-cpu
-```
-
-### LaTeX compilation fails
-- Ensure `pdflatex` is in your PATH
-- Check for missing LaTeX packages in the `.log` file
-
-### SMTP authentication error
-- Use an App Password from Outlook security settings
-- Ensure 2FA is enabled on your Microsoft account
-
-### No emails discovered
-- Many companies don't list public emails
-- Try adding more Greenhouse/Lever boards to scrape
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GOOGLE_API_KEY` | Yes | - | Gemini API key |
+| `SMTP_EMAIL` | No | - | Outlook email address |
+| `SMTP_PASSWORD` | No | - | Outlook app password |
+| `CRON_MODE` | No | `false` | Block LLM/sending |
+| `MAX_LLM_CALLS_PER_RUN` | No | `25` | Cost limit |
+| `RATE_LIMIT_SECONDS` | No | `2.0` | Scraper delay |
 
 ## License
 
-MIT License - See LICENSE file for details.
-
----
-
-**Author**: Lakshay Handa  
-**Email**: connect.lakshay@outlook.com
+MIT
