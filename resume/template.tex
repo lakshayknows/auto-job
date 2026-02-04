@@ -1,0 +1,164 @@
+% Customized Resume for \textcolor{blue}{Rohit Yadav} using provided template
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+\titleformat{\section}{\vspace{-4pt}\scshape\raggedright\large}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+\pdfgentounicode=1
+
+% Force bullet symbol instead of dash
+\renewcommand\labelitemi{\textbullet}
+
+% Custom Commands
+\newcommand{\resumeItem}[1]{\item\small{{#1 \vspace{-2pt}}}}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    \textbf{\color{Black}\Huge \scshape Rohit Yadav} \\ \vspace{1pt}
+    \small (+91) 8053064667 $|$ \href{mailto:rohithiwal13@gmail.com}{\underline{rohithiwal13@gmail.com}} $|$
+    \href{https://linkedin.com/in/rohit-yadav-016a16291}{\underline{linkedin.com/in/rohit}} $|$
+    \href{https://github.com/Rohithiwal}{\underline{github.com/Rohithiwal}}
+\end{center}
+
+%-----------EDUCATION-----------
+\section{\color{Black}\textbf{Education}}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Thapar Institute of Engineering \& Technology}{Patiala, India}
+      {Bachelor of Engineering – Mechatronics}{2023 -- 2026}
+    \resumeSubheading
+      {Central Institute of Tool Design}{India}
+      {Diploma in Tool, Die and Mould Making}{2019 -- 2023}
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{\color{Black}\textbf{Experience}}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Research Intern}{June 2025 -- July 2025}
+      {CSIR--CSIO}{Chandigarh, India}
+      \resumeItemListStart
+        \resumeItem{Cleaned and processed raw sensor data to isolate and quantify individual soil elements based on their concentration levels.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+{AI Intern}{July 2024 -- Feb 2025}
+{Spartificial}{Remote}
+\resumeItemListStart
+  \resumeItem{Built deep learning models for astronomical image analysis, processing 80k+ RGB images to study galaxy vs. star structures.}
+  \resumeItem{Designed and trained deep autoencoders (up to 20M parameters) for noise-robust reconstruction, achieving PSNR up to 32.7 dB.}
+  \resumeItem{Applied OpenCV-based morphological analysis (edges, contours) to extract and compare structural features in reconstructed images.}
+\resumeItemListEnd
+
+
+  \resumeSubHeadingListEnd
+
+%-----------PROJECTS-----------
+\section{\color{black}\textbf{Projects}}
+\resumeSubHeadingListStart
+
+\resumeProjectHeading{\textbf{Vehicle Insurance Premium MLOps} $|$ \emph{FastAPI, AWS, Docker, MongoDB}}{\href{https://huggingface.co/spaces/RohitHiwal/vehicle-insurance-prediction}{\color{SkyBlue}link}}
+\resumeItemListStart
+  \resumeItem{Built an end-to-end production ML pipeline (ingestion → training → deployment) with CI/CD using GitHub Actions and Docker on AWS EC2.}
+  \resumeItem{Integrated MongoDB Atlas for data storage and AWS S3/ECR for model and container versioning.}
+\resumeItemListEnd
+
+\resumeProjectHeading{\textbf{LLM Fine-Tuning (7B Model)} $|$ \emph{LoRA, QLoRA, Hugging Face, PEFT}}{}
+\resumeItemListStart
+  \resumeItem{Fine-tuned a 7B LLM using LoRA/QLoRA, reducing trainable parameters by 95\% while improving task accuracy and reducing hallucinations.}
+  \resumeItem{Built a SFT pipeline with mixed precision, gradient checkpointing, and 4-bit quantized inference.}
+\resumeItemListEnd
+
+\resumeProjectHeading{\textbf{RAG Chatbot Web App} $|$ \emph{FastAPI, Streamlit, ChromaDB, LangChain}}{\href{https://rag-chat-lpzi2tw6gjm7mrvflc35kn.streamlit.app/}{\color{SkyBlue}link}}
+\resumeItemListStart
+  \resumeItem{Developed a session-aware RAG system with document ingestion, contextual retrieval, and persistent chat history.}
+  \resumeItem{Implemented API-backed retrieval with metadata filtering and relevance tuning to reduce hallucinations.}
+\resumeItemListEnd
+
+\resumeProjectHeading{\textbf{Real-Time AR Language Translator} $|$ \emph{OCR, Translation API, WebRTC}}{\href{https://huggingface.co/spaces/RohitHiwal/Real_Time_AR_Translator}{\color{SkyBlue}link}}{}
+\resumeItemListStart
+  \resumeItem{Built a real-time AR translation system with OCR-based text detection and live video overlay.}
+  \resumeItem{Optimized for low-latency processing and interactive word-level lookup.}
+\resumeItemListEnd
+
+\resumeProjectHeading{\textbf{Multimodal Image Captioning} $|$ \emph{VGG16, LSTM, TensorFlow/Keras, BLEU}}{}
+\resumeItemListStart
+  \resumeItem{Built an end-to-end image captioning system combining CNN-based visual feature extraction (VGG16) with an LSTM language decoder.}
+  \resumeItem{Trained on the Flickr8k dataset and achieved BLEU-1 = 0.54 and BLEU-2 = 0.32, demonstrating semantic alignment between images and generated captions.}
+\resumeItemListEnd
+
+\resumeProjectHeading{\textbf{Inverse Kinematics using Deep Learning} $|$ \emph{Python, NumPy, DL}}{}
+    \resumeItemListStart
+      \resumeItem{Built DL-based models to solve IK for 4- and 5-DOF robotic manipulators with a focus on singularity avoidance.}
+      \resumeItem{Generated datasets via NumPy-based forward/inverse kinematic equation computations.}
+    \resumeItemListEnd
+
+
+\resumeSubHeadingListEnd
+
+%-----------TECHNICAL SKILLS-----------
+\section{\color{Black}\textbf{Technical Skills}}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: Python,C++ , Embedded C} \\
+     \textbf{Frameworks}{: Pandas, NumPy, Matplotlib, scikit-Learn, TensorFlow, PyTorch, LangChain, HuggingFace, FastAPI} \\
+     \textbf{Tools}{: Git, AWS, Docker, MongoDB, DVC,}\\
+     }
+
+}
+
+ \end{itemize}
+
+\end{document}

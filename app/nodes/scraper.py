@@ -6,6 +6,7 @@ Follows strict legal and ethical guidelines as defined in scraper.md.
 """
 
 import asyncio
+import hashlib
 import json
 import re
 import uuid
@@ -17,7 +18,7 @@ import httpx
 from bs4 import BeautifulSoup
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from app.config import DATA_DIR, get_config, get_logger
+from app.config import DATA_DIR, get_config, get_logger, log_activity
 from app.state import JobState
 
 logger = get_logger("scraper")
@@ -199,8 +200,13 @@ async def fetch_remoteok_jobs() -> list[dict]:
                 if not is_relevant_job(position, description, tags):
                     continue
 
+                # Create deterministic ID based on URL
+                job_id = hashlib.md5(item.get("url", "").encode()).hexdigest()[:8]
+                if not job_id:
+                    job_id = str(uuid.uuid4())
+
                 job = {
-                    "id": str(uuid.uuid4()),
+                    "id": job_id,
                     "company": item.get("company", ""),
                     "role": position,
                     "description": description[:2000],
@@ -292,8 +298,11 @@ async def fetch_hn_jobs() -> list[dict]:
                         valid_email = email
                         break
 
+                # ID based on HN item ID
+                job_id = hashlib.md5(f"hn_{kid_id}".encode()).hexdigest()[:8]
+
                 job = {
-                    "id": str(uuid.uuid4()),
+                    "id": job_id,
                     "company": first_line.split("|")[0].strip()[:100],
                     "role": "AI/ML Engineer",
                     "description": clean_text[:2000],
@@ -384,18 +393,37 @@ def scrape_jobs(state: JobState) -> JobState:
         with open(jobs_file, "w") as f:
             json.dump(jobs, f, indent=2)
 
+        for job in jobs:
+            log_activity(
+                "DISCOVERED",
+                job["id"],
+                job["company"],
+                f"{job['role']} ({job['contact_email']})",
+            )
+
         logger.info(f"Saved {len(jobs)} jobs (with emails) to {jobs_file}")
 
         # Return state with first job (or empty if none)
         if jobs:
-            first_job = jobs[0]
+            # Check if a specific job_id was requested
+            req_id = state.get("job_id")
+            selected_job = jobs[0]  # Default to first
+            
+            if req_id:
+                # Find the requested job in the new list
+                match = next((j for j in jobs if j["id"].startswith(req_id)), None)
+                if match:
+                    selected_job = match
+                else:
+                    logger.warning(f"Requested job {req_id} not found in scrape results, using first found.")
+
             return {
                 **state,
-                "job_id": first_job["id"],
-                "job_data": first_job,
-                "contact_email": first_job.get("contact_email"),
-                "contact_type": first_job.get("contact_type", "UNKNOWN"),
-                "email_source_url": first_job.get("email_source_url"),
+                "job_id": selected_job["id"],
+                "job_data": selected_job,
+                "contact_email": selected_job.get("contact_email"),
+                "contact_type": selected_job.get("contact_type", "UNKNOWN"),
+                "email_source_url": selected_job.get("email_source_url"),
                 "errors": state.get("errors", []),
             }
         else:

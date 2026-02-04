@@ -113,18 +113,25 @@ def cmd_process(args):
     for event in app.stream(state, config):
         if isinstance(event, tuple):
             # Some versions return (node, output) tuple
+            # If output is a dict, we can get status/errors
             node, output = event
-            status = output.get("approval_status", "N/A")
-            errors = output.get("errors", [])
-            print(f"  [{node}] status={status}, errors={len(errors)}")
+            if isinstance(output, dict):
+                status = output.get("approval_status", "N/A")
+                errors = output.get("errors", [])
+                print(f"  [{node}] status={status}, errors={len(errors)}")
+            else:
+                print(f"  [{node}] done")
         elif isinstance(event, dict):
             # Others return dict {node: output}
             for node, output in event.items():
                 if node == "__end__":
                     continue
-                status = output.get("approval_status", "N/A")
-                errors = output.get("errors", [])
-                print(f"  [{node}] status={status}, errors={len(errors)}")
+                if isinstance(output, dict):
+                    status = output.get("approval_status", "N/A")
+                    errors = output.get("errors", [])
+                    print(f"  [{node}] status={status}, errors={len(errors)}")
+                else:
+                    print(f"  [{node}] done")
 
     # Get final state
     final_state = app.get_state(config)

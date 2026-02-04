@@ -40,13 +40,13 @@ def load_prompt(name: str) -> str:
     return ""
 
 
-def load_base_resume() -> str:
-    """Load base resume LaTeX content.
+def load_resume_template() -> str:
+    """Load resume template LaTeX content.
 
     Returns:
         Resume LaTeX content
     """
-    resume_path = RESUME_DIR / "base_resume.tex"
+    resume_path = RESUME_DIR / "template.tex"
     with open(resume_path, "r", encoding="utf-8") as f:
         return f.read()
 
@@ -105,7 +105,7 @@ def compile_latex_to_pdf(tex_path: Path) -> Optional[Path]:
             logger.info(f"Compiled PDF: {pdf_path}")
             return pdf_path
         else:
-            logger.error(f"PDF compilation failed: {result.stderr}")
+            logger.error(f"PDF compilation failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
             return None
 
     except subprocess.TimeoutExpired:
@@ -157,7 +157,7 @@ def tailor_resume(state: JobState) -> JobState:
 
     try:
         # Load base resume
-        base_resume = load_base_resume()
+        base_resume = load_resume_template()
 
         # Load system prompt
         system_prompt = load_prompt("resume_tailor")

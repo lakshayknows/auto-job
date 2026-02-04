@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
-from app.config import DATA_DIR, get_logger
+from app.config import DATA_DIR, get_logger, log_activity
 from app.state import JobState
 
 logger = get_logger("approval")
@@ -126,6 +126,7 @@ def approve_job(job_id: str, notes: str = "") -> bool:
         True if approval saved
     """
     save_approval(job_id, "APPROVED", {"notes": notes})
+    log_activity("APPROVED", job_id, "Unknown", f"Notes: {notes}")
     return True
 
 
@@ -140,6 +141,7 @@ def reject_job(job_id: str, reason: str = "") -> bool:
         True if rejection saved
     """
     save_approval(job_id, "REJECTED", {"reason": reason})
+    log_activity("REJECTED", job_id, "Unknown", f"Reason: {reason}")
     return True
 
 

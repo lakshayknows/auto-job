@@ -11,7 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
-from app.config import DATA_DIR, get_config, get_logger
+from app.config import DATA_DIR, get_config, get_logger, log_activity
 from app.state import JobState
 
 logger = get_logger("sender")
@@ -140,6 +140,7 @@ def send_email(state: JobState) -> JobState:
 
         # Log sent email
         save_sent_email(job_id, recipient, subject)
+        log_activity("SENT", job_id, state.get("job_data", {}).get("company", "Unknown"), f"To: {recipient}")
 
         return {
             **state,

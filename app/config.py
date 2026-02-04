@@ -174,3 +174,34 @@ def get_logger(name: str = "autojob") -> logging.Logger:
         Logger instance
     """
     return logging.getLogger(name)
+
+
+# Activity Logging
+ACTIVITY_LOG = DATA_DIR / "activity.csv"
+
+
+def log_activity(event: str, job_id: str, company: str, details: str = ""):
+    """Log structured activity to CSV.
+
+    Args:
+        event: Event type (DISCOVERED, APPROVED, REJECTED, SENT)
+        job_id: Job ID
+        company: Company name
+        details: Optional details (e.g. email address, rejection reason)
+    """
+    import csv
+    from datetime import datetime
+
+    file_exists = ACTIVITY_LOG.exists()
+
+    try:
+        with open(ACTIVITY_LOG, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["Timestamp", "Event", "Job ID", "Company", "Details"])
+
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            writer.writerow([timestamp, event, job_id, company, details])
+    except Exception as e:
+        # Don't crash main app if logging fails
+        get_logger("activity").error(f"Failed to log activity: {e}")

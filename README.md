@@ -10,7 +10,8 @@ A LangGraph-powered automated job application system that discovers jobs, tailor
 - **Resume Generation**: Tailors LaTeX resumes for specific roles
 - **Email Drafting**: Generates professional cold emails (≤200 words)
 - **Human Approval**: LangGraph interrupt mechanism for review before sending
-- **SMTP Integration**: Sends emails via Outlook with resume attachment
+- **Activity Logging**: Tracks all actions in `data/activity.csv`
+- **SMTP Integration**: Sends emails via Outlook/Gmail with resume attachment
 
 ## Architecture
 
@@ -45,7 +46,22 @@ A LangGraph-powered automated job application system that discovers jobs, tailor
 
 ## Quick Start
 
-### 1. Setup Environment
+### 1. Prerequisites
+- **Python 3.10+**
+- **LaTeX Distribution** (for resume generation):
+  - **Ubuntu/Debian**:
+    ```bash
+    sudo apt-get install texlive-latex-base texlive-fonts-recommended texlive-fonts-extra
+    ```
+  - **Windows**:
+    - Install [MiKTeX](https://miktex.org/download) or [TeX Live](https://tug.org/texlive/).
+    - Ensure `pdflatex` is in your system PATH.
+  - **macOS**:
+    - Install [MacTeX](https://tug.org/mactex/).
+
+> **Note**: `pdflatex` is a system tool, not a Python package, so it cannot be installed via `requirements.txt`.
+
+### 2. Setup Environment
 
 ```bash
 # Clone repository
@@ -119,7 +135,7 @@ job-agent/
 │       └── sender.py      # SMTP sending
 ├── prompts/               # LLM prompt files
 ├── resume/
-│   ├── base_resume.tex    # Your base resume
+│   ├── template.tex       # Your personalized LaTeX template
 │   └── compiled/          # Generated PDFs
 ├── data/                  # Runtime data
 ├── tests/                 # Test suite
