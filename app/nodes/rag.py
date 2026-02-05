@@ -226,7 +226,7 @@ def retrieve_context(state: JobState) -> JobState:
 
         # Load and create resume index
         resume_content = load_base_resume()
-        content_hash = hashlib.md5(resume_content.encode()).hexdigest()[:8]
+        content_hash = hashlib.sha256(resume_content.encode()).hexdigest()[:8]
         resume_path = RAG_INDEX_DIR / f"resume_{content_hash}"
 
         resume_chunks = splitter.split_text(resume_content)
