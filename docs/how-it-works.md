@@ -204,7 +204,7 @@ Defense in depth. Even if approval is granted, all preconditions must be satisfi
 1. Creates MIME multipart message
 2. Attaches email body as plain text
 3. Attaches resume PDF if available
-4. Connects to SMTP server (Outlook by default)
+4. Connects to SMTP server (Gmail by default)
 5. Sends email
 6. Logs sent email to `data/sent_emails.json`
 

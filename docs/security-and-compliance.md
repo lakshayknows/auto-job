@@ -305,8 +305,8 @@ Never commit `.env` to version control:
 
 Use app passwords, not account passwords:
 
-- Outlook: Microsoft Account > Security > App passwords
 - Gmail: Google Account > Security > App passwords
+- Outlook: Microsoft Account > Security > App passwords
 
 ### API Key Rotation
 
