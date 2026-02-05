@@ -140,7 +140,12 @@ def send_email(state: JobState) -> JobState:
 
         # Log sent email
         save_sent_email(job_id, recipient, subject)
-        log_activity("SENT", job_id, state.get("job_data", {}).get("company", "Unknown"), f"To: {recipient}")
+        log_activity(
+            "SENT",
+            job_id,
+            state.get("job_data", {}).get("company", "Unknown"),
+            f"To: {recipient}",
+        )
 
         return {
             **state,

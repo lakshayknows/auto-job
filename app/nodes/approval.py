@@ -177,9 +177,11 @@ def list_pending_approvals() -> list[dict]:
 
     for job_id, record in approvals.items():
         if record.get("status") == "PENDING":
-            pending.append({
-                "job_id": job_id,
-                **record,
-            })
+            pending.append(
+                {
+                    "job_id": job_id,
+                    **record,
+                }
+            )
 
     return pending

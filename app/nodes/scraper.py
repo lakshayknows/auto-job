@@ -24,20 +24,52 @@ from app.state import JobState
 logger = get_logger("scraper")
 
 # Allowed email patterns
-ALLOWED_EMAIL_PREFIXES = ["careers", "jobs", "hiring", "hr", "talent", "recruiting", "apply", "team"]
+ALLOWED_EMAIL_PREFIXES = [
+    "careers",
+    "jobs",
+    "hiring",
+    "hr",
+    "talent",
+    "recruiting",
+    "apply",
+    "team",
+]
 
 # Allowed paths for crawling
-ALLOWED_PATHS = ["/careers", "/jobs", "/join-us", "/about", "/contact", "/work", "/team"]
+ALLOWED_PATHS = [
+    "/careers",
+    "/jobs",
+    "/join-us",
+    "/about",
+    "/contact",
+    "/work",
+    "/team",
+]
 
 # Disallowed domains
 BLOCKED_DOMAINS = ["linkedin.com", "facebook.com", "twitter.com", "x.com"]
 
 # Target job keywords for fresher/intern AI roles
 TARGET_KEYWORDS = [
-    "ai", "ml", "machine learning", "deep learning", "llm", "nlp",
-    "python", "backend", "data scientist", "data engineer",
-    "intern", "fresher", "junior", "entry level", "entry-level",
-    "graduate", "new grad", "associate", "trainee",
+    "ai",
+    "ml",
+    "machine learning",
+    "deep learning",
+    "llm",
+    "nlp",
+    "python",
+    "backend",
+    "data scientist",
+    "data engineer",
+    "intern",
+    "fresher",
+    "junior",
+    "entry level",
+    "entry-level",
+    "graduate",
+    "new grad",
+    "associate",
+    "trainee",
 ]
 
 
@@ -312,9 +344,11 @@ async def fetch_hn_jobs() -> list[dict]:
                     "source": "HackerNews",
                     "contact_email": valid_email,
                     "contact_type": "COMPANY" if valid_email else "UNKNOWN",
-                    "email_source_url": f"https://news.ycombinator.com/item?id={kid_id}"
-                    if valid_email
-                    else None,
+                    "email_source_url": (
+                        f"https://news.ycombinator.com/item?id={kid_id}"
+                        if valid_email
+                        else None
+                    ),
                     "scraped_at": datetime.now(timezone.utc).isoformat(),
                 }
                 jobs.append(job)
@@ -408,14 +442,16 @@ def scrape_jobs(state: JobState) -> JobState:
             # Check if a specific job_id was requested
             req_id = state.get("job_id")
             selected_job = jobs[0]  # Default to first
-            
+
             if req_id:
                 # Find the requested job in the new list
                 match = next((j for j in jobs if j["id"].startswith(req_id)), None)
                 if match:
                     selected_job = match
                 else:
-                    logger.warning(f"Requested job {req_id} not found in scrape results, using first found.")
+                    logger.warning(
+                        f"Requested job {req_id} not found in scrape results, using first found."
+                    )
 
             return {
                 **state,

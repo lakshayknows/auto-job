@@ -122,10 +122,9 @@ def draft_email(state: JobState) -> JobState:
         role = job_data.get("role", "Software Engineer")
         description = job_data.get("description", "")[:500]
 
-        resume_summary = "\n".join([
-            f"- {exp[:100]}"
-            for exp in rag_context.get("resume_experience", [])[:2]
-        ])
+        resume_summary = "\n".join(
+            [f"- {exp[:100]}" for exp in rag_context.get("resume_experience", [])[:2]]
+        )
 
         matching_skills = ", ".join(
             set(rag_context.get("job_skills", []))
@@ -133,8 +132,14 @@ def draft_email(state: JobState) -> JobState:
         )[:200]
 
         # Create prompt
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt if system_prompt else """You are a professional technical cold-email writer.
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    (
+                        system_prompt
+                        if system_prompt
+                        else """You are a professional technical cold-email writer.
 
 HARD LIMIT: Maximum 200 words
 
@@ -151,8 +156,12 @@ STRUCTURE:
 - Genuine interest in company/product
 - Soft call-to-action
 
-OUTPUT: Return ONLY the email body text. No explanations."""),
-            ("human", """## Job Details
+OUTPUT: Return ONLY the email body text. No explanations."""
+                    ),
+                ),
+                (
+                    "human",
+                    """## Job Details
 Company: {company}
 Role: {role}
 Description: {description}
@@ -163,8 +172,10 @@ Description: {description}
 ## Matching Skills
 {matching_skills}
 
-Write a concise job application email (max 200 words). Return ONLY the email body."""),
-        ])
+Write a concise job application email (max 200 words). Return ONLY the email body.""",
+                ),
+            ]
+        )
 
         # Initialize LLM
         llm = ChatGoogleGenerativeAI(
@@ -175,13 +186,16 @@ Write a concise job application email (max 200 words). Return ONLY the email bod
 
         # Generate email
         chain = prompt | llm
-        response = chain.invoke({
-            "company": company,
-            "role": role,
-            "description": description,
-            "resume_summary": resume_summary or "Relevant experience in software development",
-            "matching_skills": matching_skills or "Python, AI/ML",
-        })
+        response = chain.invoke(
+            {
+                "company": company,
+                "role": role,
+                "description": description,
+                "resume_summary": resume_summary
+                or "Relevant experience in software development",
+                "matching_skills": matching_skills or "Python, AI/ML",
+            }
+        )
 
         email_body = response.content.strip()
 
@@ -194,16 +208,18 @@ Write a concise job application email (max 200 words). Return ONLY the email bod
         # Cache the draft
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(cache_path, "w") as f:
-            json.dump({
-                "job_id": job_id,
-                "subject": subject,
-                "body": email_body,
-                "word_count": count_words(email_body),
-            }, f, indent=2)
+            json.dump(
+                {
+                    "job_id": job_id,
+                    "subject": subject,
+                    "body": email_body,
+                    "word_count": count_words(email_body),
+                },
+                f,
+                indent=2,
+            )
 
-        logger.info(
-            f"Drafted email for {job_id}: {count_words(email_body)} words"
-        )
+        logger.info(f"Drafted email for {job_id}: {count_words(email_body)} words")
 
         # Update token count
         llm_calls = state.get("llm_calls", 0) + 1

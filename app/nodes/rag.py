@@ -71,14 +71,48 @@ def extract_skills_from_text(text: str) -> list[str]:
     """
     # Common tech keywords to look for
     tech_keywords = [
-        "python", "rust", "javascript", "typescript", "java", "go", "c++",
-        "react", "vue", "angular", "node", "django", "flask", "fastapi",
-        "tensorflow", "pytorch", "scikit-learn", "pandas", "numpy",
-        "docker", "kubernetes", "aws", "gcp", "azure",
-        "sql", "postgresql", "mongodb", "redis",
-        "git", "linux", "api", "rest", "graphql",
-        "machine learning", "deep learning", "nlp", "llm", "rag",
-        "langchain", "langgraph", "openai", "gemini",
+        "python",
+        "rust",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "c++",
+        "react",
+        "vue",
+        "angular",
+        "node",
+        "django",
+        "flask",
+        "fastapi",
+        "tensorflow",
+        "pytorch",
+        "scikit-learn",
+        "pandas",
+        "numpy",
+        "docker",
+        "kubernetes",
+        "aws",
+        "gcp",
+        "azure",
+        "sql",
+        "postgresql",
+        "mongodb",
+        "redis",
+        "git",
+        "linux",
+        "api",
+        "rest",
+        "graphql",
+        "machine learning",
+        "deep learning",
+        "nlp",
+        "llm",
+        "rag",
+        "langchain",
+        "langgraph",
+        "openai",
+        "gemini",
     ]
 
     text_lower = text.lower()
@@ -186,8 +220,7 @@ def retrieve_context(state: JobState) -> JobState:
             embedding=get_embeddings(),
             persist_directory=str(index_path),
             metadatas=[
-                {"source": "job_description", "chunk": i}
-                for i in range(len(chunks))
+                {"source": "job_description", "chunk": i} for i in range(len(chunks))
             ],
         )
 
@@ -202,8 +235,7 @@ def retrieve_context(state: JobState) -> JobState:
             embedding=get_embeddings(),
             persist_directory=str(resume_path),
             metadatas=[
-                {"source": "resume", "chunk": i}
-                for i in range(len(resume_chunks))
+                {"source": "resume", "chunk": i} for i in range(len(resume_chunks))
             ],
         )
 
@@ -214,8 +246,10 @@ def retrieve_context(state: JobState) -> JobState:
         )
 
         # Query for relevant resume context
-        resume_query = job_data.get("role", "") + " " + " ".join(
-            extract_skills_from_text(job_description)[:5]
+        resume_query = (
+            job_data.get("role", "")
+            + " "
+            + " ".join(extract_skills_from_text(job_description)[:5])
         )
         resume_results = resume_index.similarity_search(
             resume_query,

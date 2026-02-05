@@ -132,8 +132,7 @@ def source_guard(state: JobState) -> JobState:
         logger.warning(f"Invalid email prefix: {contact_email}")
         return {
             **state,
-            "errors": errors
-            + [f"Email prefix not allowed: {contact_email}"],
+            "errors": errors + [f"Email prefix not allowed: {contact_email}"],
             "contact_email": None,  # Clear invalid email
         }
 
@@ -163,9 +162,7 @@ def send_guard(state: JobState) -> JobState:
 
     # Check 1: Approval status
     if state.get("approval_status") != "APPROVED":
-        checks_failed.append(
-            f"Not approved: status={state.get('approval_status')}"
-        )
+        checks_failed.append(f"Not approved: status={state.get('approval_status')}")
 
     # Check 2: Contact email exists
     if not state.get("contact_email"):
@@ -232,8 +229,7 @@ def cost_guard(state: JobState) -> JobState:
             **state,
             "should_skip": True,
             "skip_reason": f"LLM call limit exceeded: {llm_calls}",
-            "errors": state.get("errors", [])
-            + [f"Cost limit: {llm_calls} LLM calls"],
+            "errors": state.get("errors", []) + [f"Cost limit: {llm_calls} LLM calls"],
         }
 
     if total_tokens >= config.cost.max_tokens_per_run:
@@ -242,8 +238,7 @@ def cost_guard(state: JobState) -> JobState:
             **state,
             "should_skip": True,
             "skip_reason": f"Token limit exceeded: {total_tokens}",
-            "errors": state.get("errors", [])
-            + [f"Cost limit: {total_tokens} tokens"],
+            "errors": state.get("errors", []) + [f"Cost limit: {total_tokens} tokens"],
         }
 
     return state
