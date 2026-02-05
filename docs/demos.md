@@ -211,7 +211,7 @@ Email Draft:
 
 2024-01-15 10:40:00 | INFO     | approval | Saved approval: a1b2c3d4 -> APPROVED
 2024-01-15 10:40:00 | INFO     | guards | Send guard passed for job a1b2c3d4
-2024-01-15 10:40:01 | INFO     | sender | Connecting to SMTP: smtp.office365.com:587
+2024-01-15 10:40:01 | INFO     | sender | Connecting to SMTP: smtp.gmail.com:587
 2024-01-15 10:40:03 | INFO     | sender | Email sent successfully: a1b2c3d4 -> careers@acmecorp.com
 2024-01-15 10:40:03 | INFO     | sender | Archived job a1b2c3d4: SENT
 ```

@@ -173,9 +173,9 @@ Edit `.env` with your credentials:
 GOOGLE_API_KEY=your_gemini_api_key
 
 # Optional: For sending emails
-SMTP_SERVER=smtp.office365.com
+SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
-SMTP_EMAIL=your_email@outlook.com
+SMTP_EMAIL=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
 ```
 
@@ -343,7 +343,7 @@ job-agent/
 | `GOOGLE_API_KEY` | Yes | - | Gemini API key |
 | `SMTP_EMAIL` | No | - | Email address for sending |
 | `SMTP_PASSWORD` | No | - | Email app password |
-| `SMTP_SERVER` | No | `smtp.office365.com` | SMTP server |
+| `SMTP_SERVER` | No | `smtp.gmail.com` | SMTP server |
 | `SMTP_PORT` | No | `587` | SMTP port |
 | `CRON_MODE` | No | `false` | Block LLM and sending |
 | `MAX_LLM_CALLS_PER_RUN` | No | `25` | Cost limit |

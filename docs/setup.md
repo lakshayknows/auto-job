@@ -83,9 +83,9 @@ LLM_MODEL=gemini-1.5-flash
 LLM_TEMPERATURE=0.3
 
 # SMTP Configuration (required for sending)
-SMTP_SERVER=smtp.office365.com
+SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
-SMTP_EMAIL=your_email@outlook.com
+SMTP_EMAIL=your_email@gmail.com
 SMTP_PASSWORD=your_app_password_here
 
 # Cost Control
@@ -111,7 +111,7 @@ DEBUG=false
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SMTP_EMAIL` | - | Outlook/Gmail address for sending |
+| `SMTP_EMAIL` | - | Gmail address for sending |
 | `SMTP_PASSWORD` | - | App password (not regular password) |
 | `CRON_MODE` | `false` | Block LLM calls and sending |
 | `MAX_LLM_CALLS_PER_RUN` | `25` | Cost limit per run |
@@ -125,11 +125,11 @@ DEBUG=false
 2. Create a new API key
 3. Copy to `GOOGLE_API_KEY`
 
-**Outlook App Password:**
+**Gmail App Password:**
 
-1. Go to [Microsoft Account Security](https://account.microsoft.com/security)
+1. Go to [Google Account Security](https://myaccount.google.com/security)
 2. Enable two-factor authentication
-3. Generate an app password
+3. Generate an app password under "App passwords"
 4. Copy to `SMTP_PASSWORD`
 
 ## Running the Application
