@@ -15,11 +15,10 @@ from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 import httpx
-from bs4 import BeautifulSoup
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from app.config import DATA_DIR, get_config, get_logger, log_activity
 from app.state import JobState
+from bs4 import BeautifulSoup
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = get_logger("scraper")
 
@@ -233,7 +232,7 @@ async def fetch_remoteok_jobs() -> list[dict]:
                     continue
 
                 # Create deterministic ID based on URL
-                job_id = hashlib.md5(item.get("url", "").encode()).hexdigest()[:8]
+                job_id = hashlib.sha256(item.get("url", "").encode()).hexdigest()[:8]
                 if not job_id:
                     job_id = str(uuid.uuid4())
 
@@ -331,7 +330,7 @@ async def fetch_hn_jobs() -> list[dict]:
                         break
 
                 # ID based on HN item ID
-                job_id = hashlib.md5(f"hn_{kid_id}".encode()).hexdigest()[:8]
+                job_id = hashlib.sha256(f"hn_{kid_id}".encode()).hexdigest()[:8]
 
                 job = {
                     "id": job_id,
