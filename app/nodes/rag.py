@@ -5,15 +5,8 @@ Implements retrieval logic as defined in rag_context.md.
 """
 
 import hashlib
-from pathlib import Path
-from typing import Optional
 
-from app.config import (
-    RAG_INDEX_DIR,
-    RESUME_DIR,
-    get_config,
-    get_logger,
-)
+from app.config import RAG_INDEX_DIR, RESUME_DIR, get_config, get_logger
 from app.state import JobState, RAGContext
 
 logger = get_logger("rag")
@@ -288,6 +281,6 @@ def retrieve_context(state: JobState) -> JobState:
             "rag_context": rag_context,
         }
 
-    except Exception as e:
+    except Exception:
         logger.exception("RAG retrieval failed, using fallback")
         return simple_retrieve_context(state)

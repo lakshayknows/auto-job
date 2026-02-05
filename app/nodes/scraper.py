@@ -15,11 +15,10 @@ from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 import httpx
-from bs4 import BeautifulSoup
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from app.config import DATA_DIR, get_config, get_logger, log_activity
 from app.state import JobState
+from bs4 import BeautifulSoup
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = get_logger("scraper")
 
