@@ -105,7 +105,9 @@ def compile_latex_to_pdf(tex_path: Path) -> Optional[Path]:
             logger.info(f"Compiled PDF: {pdf_path}")
             return pdf_path
         else:
-            logger.error(f"PDF compilation failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
+            logger.error(
+                f"PDF compilation failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+            )
             return None
 
     except subprocess.TimeoutExpired:
@@ -183,8 +185,14 @@ Matching Skills: {', '.join(rag_context.get('resume_skills', [])[:10])}
 """
 
         # Create prompt
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt if system_prompt else """You are a resume tailoring agent.
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    (
+                        system_prompt
+                        if system_prompt
+                        else """You are a resume tailoring agent.
 Tailor the LaTeX resume for the specific job role.
 
 CONSTRAINTS:
@@ -199,8 +207,12 @@ GUIDELINES:
 - Adjust wording, not facts
 - Maintain technical, professional tone
 
-OUTPUT: Return ONLY valid LaTeX code. No explanations."""),
-            ("human", """## Job Context
+OUTPUT: Return ONLY valid LaTeX code. No explanations."""
+                    ),
+                ),
+                (
+                    "human",
+                    """## Job Context
 {job_context}
 
 ## Resume Context
@@ -209,8 +221,10 @@ OUTPUT: Return ONLY valid LaTeX code. No explanations."""),
 ## Base Resume LaTeX
 {base_resume}
 
-Tailor this resume for the job. Return ONLY valid LaTeX."""),
-        ])
+Tailor this resume for the job. Return ONLY valid LaTeX.""",
+                ),
+            ]
+        )
 
         # Initialize LLM
         llm = ChatGoogleGenerativeAI(
@@ -221,11 +235,13 @@ Tailor this resume for the job. Return ONLY valid LaTeX."""),
 
         # Generate tailored resume
         chain = prompt | llm
-        response = chain.invoke({
-            "job_context": job_context,
-            "resume_context": resume_context,
-            "base_resume": base_resume,
-        })
+        response = chain.invoke(
+            {
+                "job_context": job_context,
+                "resume_context": resume_context,
+                "base_resume": base_resume,
+            }
+        )
 
         # Extract LaTeX from response
         tailored_latex = response.content

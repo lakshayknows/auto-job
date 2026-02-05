@@ -236,7 +236,7 @@ def cmd_list(args):
     print(f"{'ID':<10} {'Company':<20} {'Role':<25} {'Email':<15}")
     print("-" * 70)
 
-    for job in jobs[:args.limit]:
+    for job in jobs[: args.limit]:
         job_id = job["id"][:8]
         company = job.get("company", "")[:18]
         role = job.get("role", "")[:23]

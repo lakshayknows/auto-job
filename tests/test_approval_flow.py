@@ -23,9 +23,7 @@ class TestApprovalFlow:
     @pytest.fixture
     def temp_approvals_file(self):
         """Create temporary approvals file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump({}, f)
             return Path(f.name)
 
@@ -80,10 +78,7 @@ class TestApprovalFlow:
 
     def test_existing_approval_used(self, sample_state):
         """Test that existing approval is reused."""
-        with patch(
-            "app.nodes.approval.get_approval_status",
-            return_value="APPROVED"
-        ):
+        with patch("app.nodes.approval.get_approval_status", return_value="APPROVED"):
             state = {**sample_state, "approval_status": "PENDING"}
             result = request_approval(state)
             assert result["approval_status"] == "APPROVED"
