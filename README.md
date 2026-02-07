@@ -7,7 +7,6 @@
 ![Tests](https://img.shields.io/badge/tests-40%20passed-brightgreen)
 ![LangGraph](https://img.shields.io/badge/LangGraph-2.0-purple)
 
-**A LangGraph-powered autonomous job application agent with human-in-the-loop approval.**
 
 [Architecture](#architecture) | [Quick Start](#quick-start) | [Documentation](#documentation) | [Contributing](#contributing)
 
@@ -21,14 +20,15 @@ AutoJob Agent is an automated job application system that discovers entry-level 
 
 ### Key Features
 
-- **Autonomous Job Discovery**: Scrapes legal public APIs (RemoteOK, Hacker News "Who is Hiring")
-- **Smart Email Extraction**: Discovers public company emails from career pages
-- **RAG-Powered Tailoring**: Uses vector search to match your resume to job requirements
-- **LaTeX Resume Generation**: Produces professional, single-page tailored resumes
-- **Intelligent Email Drafting**: Generates concise cold emails (max 200 words)
-- **Human-in-the-Loop**: Graph pauses for your approval before sending anything
-- **Cost Controls**: Token limits, LLM call limits, and aggressive caching
-- **Safety First**: No LinkedIn scraping, no auto-sending, full audit trail
+
+- **Job Discovery**: Scrapes legal public sources (RemoteOK, Hacker News)
+- **Email Extraction**: Discovers public company contact emails
+- **RAG-Powered Tailoring**: Uses vector search to match resume to job requirements
+- **Resume Generation**: Tailors LaTeX resumes for specific roles
+- **Email Drafting**: Generates professional cold emails (≤200 words)
+- **Human Approval**: LangGraph interrupt mechanism that pauses for review only when approval is PENDING. Approved jobs proceed automatically.
+- **Activity Logging**: Tracks all actions in `data/activity.csv`
+- **SMTP Integration**: Sends emails via Outlook/Gmail with resume attachment
 
 ### What This Is NOT
 
@@ -437,6 +437,15 @@ We welcome contributions! Please see [docs/contributing.md](docs/contributing.md
 - [ChromaDB](https://www.trychroma.com/) - Vector database
 
 ---
+
+
+## Troubleshooting
+
+### SMTP Authentication Failed
+If you see `SMTPAuthenticationError` or `535 5.7.8 Username and Password not accepted`:
+1. **Gmail**: You cannot use your regular password. You must generate an [App Password](https://myaccount.google.com/apppasswords).
+2. **Outlook**: Ensure SMTP auth is enabled in your account settings.
+3. **App Password**: The password should be 16 characters, often displayed as 4 groups of 4. Enter it without spaces in your `.env` file.
 
 ## License
 

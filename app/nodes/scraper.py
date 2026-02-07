@@ -421,36 +421,86 @@ def scrape_jobs(state: JobState) -> JobState:
     try:
         jobs = asyncio.run(scrape_all_jobs())
 
-        # Save jobs to data file
+        # Load existing jobs
         jobs_file = DATA_DIR / "jobs.json"
-        with open(jobs_file, "w") as f:
-            json.dump(jobs, f, indent=2)
+        existing_jobs = []
+        if jobs_file.exists():
+            try:
+                with open(jobs_file, "r") as f:
+                    existing_jobs = json.load(f)
+            except Exception as e:
+                logger.error(f"Failed to load existing jobs: {e}")
 
+        # Create lookup sets for deduplication
+        existing_ids = {job["id"] for job in existing_jobs}
+        existing_urls = {job["job_url"] for job in existing_jobs if job.get("job_url")}
+
+        # Filter out duplicates
+        new_unique_jobs = []
         for job in jobs:
-            log_activity(
-                "DISCOVERED",
-                job["id"],
-                job["company"],
-                f"{job['role']} ({job['contact_email']})",
-            )
+            if job["id"] in existing_ids:
+                continue
+            if job.get("job_url") and job["job_url"] in existing_urls:
+                continue
+            new_unique_jobs.append(job)
 
-        logger.info(f"Saved {len(jobs)} jobs (with emails) to {jobs_file}")
+        if new_unique_jobs:
+            logger.info(f"Found {len(new_unique_jobs)} new unique jobs")
+            # Append new jobs to existing
+            all_jobs = existing_jobs + new_unique_jobs
+            
+            # Save updated list
+            with open(jobs_file, "w") as f:
+                json.dump(all_jobs, f, indent=2)
 
-        # Return state with first job (or empty if none)
-        if jobs:
-            # Check if a specific job_id was requested
-            req_id = state.get("job_id")
-            selected_job = jobs[0]  # Default to first
+            for job in new_unique_jobs:
+                log_activity(
+                    "DISCOVERED",
+                    job["id"],
+                    job["company"],
+                    f"{job['role']} ({job['contact_email']})",
+                )
+            
+            logger.info(f"Saved {len(all_jobs)} total jobs to {jobs_file}")
+            
+            # Use the first NEW job as the selected one, or fall back to last added
+            selected_job = new_unique_jobs[0]
+        else:
+            logger.info("No new unique jobs found")
+            # If no new jobs, reuse the most recent one if available
+            if existing_jobs:
+                all_jobs = existing_jobs
+                selected_job = existing_jobs[-1]
+                # We still want to return a valid state to process maybe? 
+                # Or if the user really wants NEW jobs, we might skip.
+                # For now, let's allow re-processing the last one if nothing new found, 
+                # UNLESS the user specifically asked for a new scrape. 
+                # But to avoid infinite loops of re-applying, let's just pick the last one 
+                # and let the pipeline decide (it likely checks 'sent' status elsewhere).
+                
+                # Actually, better to just return the filtered list of "jobs" (the new ones) 
+                # as the operating set for this run.
+            else:
+                all_jobs = existing_jobs
+                return {
+                    **state,
+                    "errors": state.get("errors", []) + ["No jobs with emails found"],
+                    "should_skip": True,
+                    "skip_reason": "No jobs with emails discovered",
+                }
 
-            if req_id:
-                # Find the requested job in the new list
-                match = next((j for j in jobs if j["id"].startswith(req_id)), None)
-                if match:
-                    selected_job = match
-                else:
-                    logger.warning(
-                        f"Requested job {req_id} not found in scrape results, using first found."
-                    )
+        # Return state with the selected job
+        # Check if a specific job_id was requested
+        req_id = state.get("job_id")
+        
+        if req_id:
+            # Find the requested job in the ALL list
+            match = next((j for j in all_jobs if j["id"].startswith(req_id)), None)
+            if match:
+                selected_job = match
+            else:
+                logger.warning(f"Requested job {req_id} not found in scrape results.")
+
 
             return {
                 **state,
