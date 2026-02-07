@@ -9,7 +9,7 @@ A LangGraph-powered automated job application system that discovers jobs, tailor
 - **RAG-Powered Tailoring**: Uses vector search to match resume to job requirements
 - **Resume Generation**: Tailors LaTeX resumes for specific roles
 - **Email Drafting**: Generates professional cold emails (≤200 words)
-- **Human Approval**: LangGraph interrupt mechanism for review before sending
+- **Human Approval**: LangGraph interrupt mechanism that pauses for review only when approval is PENDING. Approved jobs proceed automatically.
 - **Activity Logging**: Tracks all actions in `data/activity.csv`
 - **SMTP Integration**: Sends emails via Outlook/Gmail with resume attachment
 
@@ -209,6 +209,15 @@ docker run --env-file .env job-agent status
 | `CRON_MODE` | No | `false` | Block LLM/sending |
 | `MAX_LLM_CALLS_PER_RUN` | No | `25` | Cost limit |
 | `RATE_LIMIT_SECONDS` | No | `2.0` | Scraper delay |
+
+
+## Troubleshooting
+
+### SMTP Authentication Failed
+If you see `SMTPAuthenticationError` or `535 5.7.8 Username and Password not accepted`:
+1. **Gmail**: You cannot use your regular password. You must generate an [App Password](https://myaccount.google.com/apppasswords).
+2. **Outlook**: Ensure SMTP auth is enabled in your account settings.
+3. **App Password**: The password should be 16 characters, often displayed as 4 groups of 4. Enter it without spaces in your `.env` file.
 
 ## License
 

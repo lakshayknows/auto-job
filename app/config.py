@@ -111,7 +111,7 @@ class Config:
             ),
             scraper=ScraperConfig(
                 rate_limit_seconds=float(os.getenv("RATE_LIMIT_SECONDS", "2.0")),
-                max_jobs_per_source=int(os.getenv("MAX_JOBS_PER_SOURCE", "25")),
+                max_jobs_per_source=int(os.getenv("MAX_JOBS_PER_SOURCE", "150")),
                 serpapi_key=os.getenv("SERPAPI_KEY"),
             ),
             cron_mode=os.getenv("CRON_MODE", "false").lower() == "true",
