@@ -15,29 +15,60 @@ from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 import httpx
-from bs4 import BeautifulSoup
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from app.config import DATA_DIR, get_config, get_logger, log_activity
 from app.state import JobState
+from bs4 import BeautifulSoup
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = get_logger("scraper")
 
 # Allowed email patterns
-ALLOWED_EMAIL_PREFIXES = ["careers", "jobs", "hiring", "hr", "talent", "recruiting", "apply", "team"]
+ALLOWED_EMAIL_PREFIXES = [
+    "careers",
+    "jobs",
+    "hiring",
+    "hr",
+    "talent",
+    "recruiting",
+    "apply",
+    "team",
+]
 
 # Allowed paths for crawling
-ALLOWED_PATHS = ["/careers", "/jobs", "/join-us", "/about", "/contact", "/work", "/team"]
+ALLOWED_PATHS = [
+    "/careers",
+    "/jobs",
+    "/join-us",
+    "/about",
+    "/contact",
+    "/work",
+    "/team",
+]
 
 # Disallowed domains
 BLOCKED_DOMAINS = ["linkedin.com", "facebook.com", "twitter.com", "x.com"]
 
 # Target job keywords for fresher/intern AI roles
 TARGET_KEYWORDS = [
-    "ai", "ml", "machine learning", "deep learning", "llm", "nlp",
-    "python", "backend", "data scientist", "data engineer",
-    "intern", "fresher", "junior", "entry level", "entry-level",
-    "graduate", "new grad", "associate", "trainee",
+    "ai",
+    "ml",
+    "machine learning",
+    "deep learning",
+    "llm",
+    "nlp",
+    "python",
+    "backend",
+    "data scientist",
+    "data engineer",
+    "intern",
+    "fresher",
+    "junior",
+    "entry level",
+    "entry-level",
+    "graduate",
+    "new grad",
+    "associate",
+    "trainee",
 ]
 
 
@@ -201,7 +232,7 @@ async def fetch_remoteok_jobs() -> list[dict]:
                     continue
 
                 # Create deterministic ID based on URL
-                job_id = hashlib.md5(item.get("url", "").encode()).hexdigest()[:8]
+                job_id = hashlib.sha256(item.get("url", "").encode()).hexdigest()[:8]
                 if not job_id:
                     job_id = str(uuid.uuid4())
 
@@ -299,7 +330,7 @@ async def fetch_hn_jobs() -> list[dict]:
                         break
 
                 # ID based on HN item ID
-                job_id = hashlib.md5(f"hn_{kid_id}".encode()).hexdigest()[:8]
+                job_id = hashlib.sha256(f"hn_{kid_id}".encode()).hexdigest()[:8]
 
                 job = {
                     "id": job_id,
@@ -312,9 +343,11 @@ async def fetch_hn_jobs() -> list[dict]:
                     "source": "HackerNews",
                     "contact_email": valid_email,
                     "contact_type": "COMPANY" if valid_email else "UNKNOWN",
-                    "email_source_url": f"https://news.ycombinator.com/item?id={kid_id}"
-                    if valid_email
-                    else None,
+                    "email_source_url": (
+                        f"https://news.ycombinator.com/item?id={kid_id}"
+                        if valid_email
+                        else None
+                    ),
                     "scraped_at": datetime.now(timezone.utc).isoformat(),
                 }
                 jobs.append(job)

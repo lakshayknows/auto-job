@@ -5,15 +5,8 @@ Implements retrieval logic as defined in rag_context.md.
 """
 
 import hashlib
-from pathlib import Path
-from typing import Optional
 
-from app.config import (
-    RAG_INDEX_DIR,
-    RESUME_DIR,
-    get_config,
-    get_logger,
-)
+from app.config import RAG_INDEX_DIR, RESUME_DIR, get_config, get_logger
 from app.state import JobState, RAGContext
 
 logger = get_logger("rag")
@@ -71,14 +64,48 @@ def extract_skills_from_text(text: str) -> list[str]:
     """
     # Common tech keywords to look for
     tech_keywords = [
-        "python", "rust", "javascript", "typescript", "java", "go", "c++",
-        "react", "vue", "angular", "node", "django", "flask", "fastapi",
-        "tensorflow", "pytorch", "scikit-learn", "pandas", "numpy",
-        "docker", "kubernetes", "aws", "gcp", "azure",
-        "sql", "postgresql", "mongodb", "redis",
-        "git", "linux", "api", "rest", "graphql",
-        "machine learning", "deep learning", "nlp", "llm", "rag",
-        "langchain", "langgraph", "openai", "gemini",
+        "python",
+        "rust",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "c++",
+        "react",
+        "vue",
+        "angular",
+        "node",
+        "django",
+        "flask",
+        "fastapi",
+        "tensorflow",
+        "pytorch",
+        "scikit-learn",
+        "pandas",
+        "numpy",
+        "docker",
+        "kubernetes",
+        "aws",
+        "gcp",
+        "azure",
+        "sql",
+        "postgresql",
+        "mongodb",
+        "redis",
+        "git",
+        "linux",
+        "api",
+        "rest",
+        "graphql",
+        "machine learning",
+        "deep learning",
+        "nlp",
+        "llm",
+        "rag",
+        "langchain",
+        "langgraph",
+        "openai",
+        "gemini",
     ]
 
     text_lower = text.lower()
@@ -186,14 +213,13 @@ def retrieve_context(state: JobState) -> JobState:
             embedding=get_embeddings(),
             persist_directory=str(index_path),
             metadatas=[
-                {"source": "job_description", "chunk": i}
-                for i in range(len(chunks))
+                {"source": "job_description", "chunk": i} for i in range(len(chunks))
             ],
         )
 
         # Load and create resume index
         resume_content = load_base_resume()
-        content_hash = hashlib.md5(resume_content.encode()).hexdigest()[:8]
+        content_hash = hashlib.sha256(resume_content.encode()).hexdigest()[:8]
         resume_path = RAG_INDEX_DIR / f"resume_{content_hash}"
 
         resume_chunks = splitter.split_text(resume_content)
@@ -202,8 +228,7 @@ def retrieve_context(state: JobState) -> JobState:
             embedding=get_embeddings(),
             persist_directory=str(resume_path),
             metadatas=[
-                {"source": "resume", "chunk": i}
-                for i in range(len(resume_chunks))
+                {"source": "resume", "chunk": i} for i in range(len(resume_chunks))
             ],
         )
 
@@ -214,8 +239,10 @@ def retrieve_context(state: JobState) -> JobState:
         )
 
         # Query for relevant resume context
-        resume_query = job_data.get("role", "") + " " + " ".join(
-            extract_skills_from_text(job_description)[:5]
+        resume_query = (
+            job_data.get("role", "")
+            + " "
+            + " ".join(extract_skills_from_text(job_description)[:5])
         )
         resume_results = resume_index.similarity_search(
             resume_query,
@@ -254,6 +281,6 @@ def retrieve_context(state: JobState) -> JobState:
             "rag_context": rag_context,
         }
 
-    except Exception as e:
+    except Exception:
         logger.exception("RAG retrieval failed, using fallback")
         return simple_retrieve_context(state)

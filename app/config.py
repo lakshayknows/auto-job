@@ -100,7 +100,7 @@ class Config:
                 temperature=float(os.getenv("LLM_TEMPERATURE", "0.3")),
             ),
             smtp=SMTPConfig(
-                server=os.getenv("SMTP_SERVER", "smtp.office365.com"),
+                server=os.getenv("SMTP_SERVER", "smtp.gmail.com"),
                 port=int(os.getenv("SMTP_PORT", "587")),
                 email=os.getenv("SMTP_EMAIL", ""),
                 password=os.getenv("SMTP_PASSWORD", ""),

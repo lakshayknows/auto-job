@@ -66,13 +66,21 @@ class TestSendGuard:
     @patch("app.nodes.guards.get_config")
     def test_send_guard_blocks_cron_mode(self, mock_config, sample_state):
         """Test that CRON_MODE blocks sending."""
-        mock_cfg = type("Config", (), {
-            "cron_mode": True,
-            "cost": type("Cost", (), {
-                "max_llm_calls_per_run": 25,
-                "max_tokens_per_run": 100000,
-            })(),
-        })()
+        mock_cfg = type(
+            "Config",
+            (),
+            {
+                "cron_mode": True,
+                "cost": type(
+                    "Cost",
+                    (),
+                    {
+                        "max_llm_calls_per_run": 25,
+                        "max_tokens_per_run": 100000,
+                    },
+                )(),
+            },
+        )()
         mock_config.return_value = mock_cfg
 
         state = {
@@ -88,13 +96,21 @@ class TestSendGuard:
     @patch("app.nodes.guards.get_config")
     def test_send_guard_passes_valid(self, mock_config, sample_state):
         """Test that valid state passes all checks."""
-        mock_cfg = type("Config", (), {
-            "cron_mode": False,
-            "cost": type("Cost", (), {
-                "max_llm_calls_per_run": 25,
-                "max_tokens_per_run": 100000,
-            })(),
-        })()
+        mock_cfg = type(
+            "Config",
+            (),
+            {
+                "cron_mode": False,
+                "cost": type(
+                    "Cost",
+                    (),
+                    {
+                        "max_llm_calls_per_run": 25,
+                        "max_tokens_per_run": 100000,
+                    },
+                )(),
+            },
+        )()
         mock_config.return_value = mock_cfg
 
         state = {
