@@ -1,0 +1,62 @@
+# =============================================================================
+# AutoJob Agent - Cron Job Configuration Example
+# =============================================================================
+#
+# CRON_MODE is a hard safety boundary that ensures scheduled runs:
+# - Only discover jobs from public APIs
+# - Only extract emails from public career pages
+# - NEVER invoke LLMs
+# - NEVER generate resumes
+# - NEVER draft emails
+# - NEVER send emails
+#
+# IMPORTANT: Always set CRON_MODE=true for scheduled runs.
+#
+# =============================================================================
+
+# Run job discovery every 6 hours
+# This scrapes RemoteOK and HackerNews for new AI/ML job listings
+0 */6 * * * CRON_MODE=true /path/to/python -m app.main discover >> /var/log/autojob/discover.log 2>&1
+
+# Alternative: Run discovery at specific times (9am, 3pm, 9pm)
+# 0 9,15,21 * * * CRON_MODE=true /path/to/python -m app.main discover >> /var/log/autojob/discover.log 2>&1
+
+# =============================================================================
+# IMPORTANT NOTES
+# =============================================================================
+#
+# 1. ALWAYS include CRON_MODE=true
+#    Without this flag, the system may attempt LLM calls or email sending.
+#
+# 2. Only use 'discover' command in cron jobs
+#    The following commands are allowed in CRON_MODE:
+#    - discover: Scrape jobs and extract emails
+#    - list: View discovered jobs (read-only)
+#    - status: View system status (read-only)
+#
+#    The following commands are BLOCKED in CRON_MODE:
+#    - process: Would attempt LLM calls
+#    - approve/reject: Approval flow is blocked
+#    - (any future LLM-related commands)
+#
+# 3. Check logs for CRON_MODE confirmation
+#    Logs should show: "CRON_MODE active - blocking LLM operations"
+#
+# 4. Test your cron setup
+#    Run manually first: CRON_MODE=true python -m app.main discover
+#    Verify: No LLM API calls, no emails sent, jobs.json updated
+#
+# =============================================================================
+# WINDOWS TASK SCHEDULER EQUIVALENT
+# =============================================================================
+#
+# For Windows, use Task Scheduler with:
+# Program: cmd.exe
+# Arguments: /c "set CRON_MODE=true && cd C:\path\to\job-agent && python -m app.main discover"
+# Schedule: Every 6 hours
+#
+# Or use PowerShell:
+# Program: powershell.exe
+# Arguments: -Command "$env:CRON_MODE='true'; cd 'C:\path\to\job-agent'; python -m app.main discover"
+#
+# =============================================================================

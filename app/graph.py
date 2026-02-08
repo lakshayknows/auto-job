@@ -5,22 +5,18 @@ This module defines the complete graph structure with:
 - Conditional edges for guards
 - Approval interrupt mechanism
 - Memory checkpointing for state persistence
+- CRON_MODE enforcement (hard circuit breaker)
 """
 
 from typing import Literal
 
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, StateGraph
-
-from app.config import get_config, get_logger
+from app.config import get_logger
 from app.nodes.approval import request_approval, route_after_approval
 from app.nodes.email import draft_email
 from app.nodes.guards import (
+    check_cron_mode,
     cost_guard,
-    cron_mode_guard,
     legal_guard,
-    route_after_legal_guard,
-    route_after_send_guard,
     send_guard,
     source_guard,
 )
@@ -29,6 +25,8 @@ from app.nodes.resume import tailor_resume
 from app.nodes.scraper import scrape_jobs
 from app.nodes.sender import archive_job, send_email
 from app.state import JobState
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
 
 logger = get_logger("graph")
 
@@ -52,21 +50,25 @@ def should_skip(state: JobState) -> Literal["continue", "skip"]:
 def check_cron_mode(state: JobState) -> JobState:
     """Pre-check for CRON_MODE before LLM nodes.
 
+    In CRON_MODE, this sets should_skip=True which routes to archive.
+    The individual nodes also have hard circuit breakers (CronModeError)
+    as defense in depth.
+
     Args:
         state: Current job state
 
     Returns:
         Updated state with skip flag if CRON_MODE active
     """
-    config = get_config()
-    if config.cron_mode:
+    if is_cron_mode():
         logger.info("CRON_MODE active - blocking LLM operations")
         return {
             **state,
             "should_skip": True,
             "skip_reason": "CRON_MODE active - LLM blocked",
         }
-    return cost_guard(state)  # Also check cost limits
+    # Only check cost limits when NOT in CRON_MODE
+    return cost_guard(state)
 
 
 def create_graph() -> StateGraph:

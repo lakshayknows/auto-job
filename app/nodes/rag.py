@@ -163,17 +163,14 @@ def retrieve_context(state: JobState) -> JobState:
 
     Returns:
         Updated state with rag_context
-    """
-    config = get_config()
 
-    # Check CRON_MODE
-    if config.cron_mode:
-        logger.info("CRON_MODE active - skipping RAG retrieval")
-        return {
-            **state,
-            "should_skip": True,
-            "skip_reason": "CRON_MODE active",
-        }
+    Raises:
+        CronModeError: If CRON_MODE is active (hard block)
+    """
+    from app.nodes.guards import assert_not_cron_mode
+
+    # CRON_MODE: Hard circuit breaker - RAG retrieval is blocked
+    assert_not_cron_mode("RAG retrieval")
 
     # Check if already retrieved
     if state.get("rag_context"):

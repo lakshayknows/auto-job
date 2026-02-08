@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Allowed Gemini models (strict validation)
+ALLOWED_GEMINI_MODELS = {"gemini-2.5-pro", "gemini-2.5-flash"}
+
 # Base paths
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -31,8 +34,8 @@ class LLMConfig:
     """LLM configuration settings."""
 
     google_api_key: str
-    model_name: str = "gemini-1.5-flash"
-    temperature: float = 0.3
+    model_name: str = "gemini-2.5-flash"  # Gemini 2.5 for better stability
+    temperature: float = 0.2  # Lower for more consistent output
     max_output_tokens: int = 4096
 
 
@@ -91,13 +94,21 @@ class Config:
         """
         google_api_key = os.getenv("GOOGLE_API_KEY")
         if not google_api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable is required")
+            raise RuntimeError("GOOGLE_API_KEY environment variable is required")
+
+        # Validate model name (strict: only Gemini 2.5 allowed)
+        model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        if model_name not in ALLOWED_GEMINI_MODELS:
+            raise RuntimeError(
+                f"Invalid GEMINI_MODEL: {model_name}. "
+                f"Allowed models: {', '.join(sorted(ALLOWED_GEMINI_MODELS))}"
+            )
 
         return cls(
             llm=LLMConfig(
                 google_api_key=google_api_key,
-                model_name=os.getenv("LLM_MODEL", "gemini-1.5-flash"),
-                temperature=float(os.getenv("LLM_TEMPERATURE", "0.3")),
+                model_name=model_name,
+                temperature=float(os.getenv("LLM_TEMPERATURE", "0.2")),
             ),
             smtp=SMTPConfig(
                 server=os.getenv("SMTP_SERVER", "smtp.gmail.com"),

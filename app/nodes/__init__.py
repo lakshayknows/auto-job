@@ -3,8 +3,11 @@
 from app.nodes.approval import request_approval, route_after_approval
 from app.nodes.email import draft_email
 from app.nodes.guards import (
+    CronModeError,
+    assert_not_cron_mode,
     cost_guard,
     cron_mode_guard,
+    is_cron_mode,
     legal_guard,
     route_after_legal_guard,
     route_after_send_guard,
@@ -17,6 +20,11 @@ from app.nodes.scraper import scrape_jobs
 from app.nodes.sender import archive_job, send_email
 
 __all__ = [
+    # CRON_MODE enforcement
+    "CronModeError",
+    "assert_not_cron_mode",
+    "is_cron_mode",
+    # Nodes
     "scrape_jobs",
     "legal_guard",
     "source_guard",

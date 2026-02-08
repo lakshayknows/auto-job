@@ -64,16 +64,16 @@ def send_email(state: JobState) -> JobState:
 
     Returns:
         Updated state with sent flag
-    """
-    config = get_config()
 
-    # Final safety checks
-    if config.cron_mode:
-        logger.warning("CRON_MODE active - sending blocked")
-        return {
-            **state,
-            "errors": state.get("errors", []) + ["CRON_MODE blocked send"],
-        }
+    Raises:
+        CronModeError: If CRON_MODE is active (hard block)
+    """
+    from app.nodes.guards import assert_not_cron_mode
+
+    # CRON_MODE: Hard circuit breaker - email sending is blocked
+    assert_not_cron_mode("email sending")
+
+    config = get_config()
 
     if state.get("approval_status") != "APPROVED":
         logger.error("Attempted to send unapproved email")

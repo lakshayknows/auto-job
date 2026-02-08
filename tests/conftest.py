@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Set test environment
 os.environ["GOOGLE_API_KEY"] = "test_key"
+os.environ["GEMINI_MODEL"] = "gemini-2.5-flash"  # Use valid Gemini 2.5 model
 os.environ["CRON_MODE"] = "true"
 os.environ["DEBUG"] = "true"
 

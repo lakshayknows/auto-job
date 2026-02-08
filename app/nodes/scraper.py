@@ -419,24 +419,35 @@ def scrape_jobs(state: JobState) -> JobState:
         Updated state with job data
     """
     try:
+        # Optimization: Check if job already exists locally
+        req_id = state.get("job_id")
+        jobs_file = DATA_DIR / "jobs.json"
+        
+        if req_id and jobs_file.exists():
+            with open(jobs_file, "r") as f:
+                existing_jobs = json.load(f)
+            
+            # Find requested job
+            match = next((j for j in existing_jobs if j["id"].startswith(req_id)), None)
+            if match:
+                logger.info(f"Using existing job data for {match['id']}")
+                return {
+                    **state,
+                    "job_id": match["id"],
+                    "job_data": match,
+                    "contact_email": match.get("contact_email"),
+                    "contact_type": match.get("contact_type", "UNKNOWN"),
+                    "email_source_url": match.get("email_source_url"),
+                    "errors": state.get("errors", []),
+                }
+
+        # No match or no ID, proceed with scraping
         jobs = asyncio.run(scrape_all_jobs())
 
-        # Load existing jobs
-        jobs_file = DATA_DIR / "jobs.json"
-        existing_jobs = []
-        if jobs_file.exists():
-            try:
-                with open(jobs_file, "r") as f:
-                    existing_jobs = json.load(f)
-            except Exception as e:
-                logger.error(f"Failed to load existing jobs: {e}")
+        # Save jobs to data file
+        with open(jobs_file, "w") as f:
+            json.dump(jobs, f, indent=2)
 
-        # Create lookup sets for deduplication
-        existing_ids = {job["id"] for job in existing_jobs}
-        existing_urls = {job["job_url"] for job in existing_jobs if job.get("job_url")}
-
-        # Filter out duplicates
-        new_unique_jobs = []
         for job in jobs:
             if job["id"] in existing_ids:
                 continue

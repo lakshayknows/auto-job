@@ -112,7 +112,7 @@ The approval mechanism is enforced at three levels:
 
 ### Approval Flow
 
-```
+```text
 [Email Drafted] --> [Approval Node] --> INTERRUPT
                                             |
                                     [Human Reviews]
@@ -235,37 +235,73 @@ All outputs can be verified:
 
 ### Purpose
 
-CRON_MODE allows scheduled job discovery without risk of:
+CRON_MODE is a **hard safety boundary** that enables scheduled job discovery without risk of:
 
 - Unexpected LLM costs
 - Accidental email sending
 - Unreviewed applications
 
-### What Is Blocked
+### Enforcement Levels
+
+CRON_MODE is enforced at **three levels**:
+
+| Level | Location | Mechanism |
+|-------|----------|-----------|
+| CLI | `main.py` | Blocks non-allowed commands before execution |
+| Graph | `graph.py` | Routes to archive, bypasses LLM nodes |
+| Node | Each LLM node | Raises `CronModeError` (hard circuit breaker) |
+
+### Hard Circuit Breaker
+
+Each LLM-using node has a hard circuit breaker:
 
 ```python
-if config.cron_mode:
-    # RAG retrieval
-    return {..., "should_skip": True}
-
-if config.cron_mode:
-    # Resume tailoring
-    return {..., "should_skip": True}
-
-if config.cron_mode:
-    # Email drafting
-    return {..., "should_skip": True}
-
-if config.cron_mode:
-    # Email sending
-    return {..., "errors": [..., "CRON_MODE blocked send"]}
+def retrieve_context(state):
+    assert_not_cron_mode("RAG retrieval")  # Raises CronModeError
+    ...
 ```
+
+This ensures violations are impossible to ignore.
 
 ### What Is Allowed
 
-- Job discovery from public APIs
-- Legal guard checks
-- Archiving
+| Operation | Reason |
+|-----------|--------|
+| Job scraping | Read-only HTTP, no LLM |
+| Email discovery | Read-only HTTP, no LLM |
+| Writing jobs.json | Local data persistence |
+| Legal/source guards | No LLM |
+| Archiving | No LLM |
+| `discover` command | Allowed at CLI |
+| `list` command | Read-only, allowed at CLI |
+| `status` command | Read-only, allowed at CLI |
+
+### What Is Blocked
+
+| Operation | Exception Raised |
+|-----------|------------------|
+| RAG retrieval | `CronModeError("RAG retrieval")` |
+| Resume tailoring | `CronModeError("resume tailoring")` |
+| Email drafting | `CronModeError("email drafting")` |
+| Email sending | `CronModeError("email sending")` |
+| `process` command | CLI blocks before execution |
+| `approve` command | CLI blocks before execution |
+| `reject` command | CLI blocks before execution |
+| Cost guard | Explicitly disabled (no LLM = no cost) |
+
+### Why Email Discovery Is Allowed
+
+Email discovery is allowed in CRON_MODE because it:
+
+1. Uses only read-only HTTP requests
+2. Accesses only public career/contact pages
+3. Does not invoke any LLM
+4. Does not send any data externally
+5. Is purely local data enrichment
+
+The mental model: **if it's read-only and deterministic, it's allowed**.
+
+> See [CRON_MODE Documentation](cron-mode.md) for complete details.
 
 ## Cost Protection
 
@@ -327,3 +363,53 @@ docker build -t job-agent .
 # Pass secrets at runtime
 docker run --env-file .env job-agent
 ```
+
+## MCP Weaponization Prevention
+
+This system implements multiple safeguards to prevent autonomous or malicious use as an "MCP weapon":
+
+### Human-in-the-Loop Enforcement
+
+All outbound actions require explicit human approval:
+
+| Action | Autonomous? | Approval Required |
+|--------|-------------|-------------------|
+| Job Discovery | ✅ Yes | ❌ No |
+| Resume Generation | ✅ Yes | ❌ No (local only) |
+| Email Drafting | ✅ Yes | ❌ No (draft only) |
+| **Email Sending** | ❌ No | ✅ **YES** |
+
+### Approval Mechanisms
+
+1. **Interactive CLI Prompt**: When processing a job, the CLI prompts for `[y/n]` confirmation
+2. **Separate Approve Command**: `python -m app.main approve <job_id>` requires explicit invocation
+3. **State Verification**: `send_guard` validates `approval_status == APPROVED` before dispatch
+
+### Design Decisions
+
+> [!IMPORTANT]
+> The approval requirement is **intentional and cannot be bypassed programmatically**.
+
+This design ensures:
+- No autonomous mass emailing
+- Human review of every outbound message
+- Clear audit trail of approvals
+- Prevention of spam or phishing attacks
+
+### Runtime Guards
+
+```python
+# In send_guard()
+if state.get("approval_status") != "APPROVED":
+    return {..., "send_guard_passed": False, "errors": ["Not approved"]}
+```
+
+### CRON_MODE Protection
+
+When `CRON_MODE=true`:
+- All LLM calls are blocked
+- All email sending is blocked
+- Only read-only operations are allowed
+
+This prevents scheduled jobs from autonomously sending emails.
+

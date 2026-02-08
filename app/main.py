@@ -10,7 +10,6 @@ Provides command-line interface for:
 import argparse
 import json
 import sys
-from pathlib import Path
 
 from app.config import DATA_DIR, get_config, get_logger, setup_logging
 from app.graph import get_app
@@ -36,9 +35,6 @@ def load_jobs() -> list[dict]:
 def cmd_discover(args):
     """Discover jobs from legal sources."""
     logger.info("Starting job discovery...")
-
-    app = get_app()
-    config = {"configurable": {"thread_id": "discovery"}}
 
     # Run scraper node only
     initial_state = {
@@ -103,14 +99,14 @@ def cmd_process(args):
 
     # Get graph and run
     app = get_app()
-    config = {"configurable": {"thread_id": job_id}}
+    graph_config = {"configurable": {"thread_id": job_id}}
 
     print(f"\nProcessing: {job.get('company')} - {job.get('role')}")
     print(f"Contact: {job.get('contact_email', 'N/A')}")
     print("-" * 50)
 
     # Run graph until interrupt or completion
-    for event in app.stream(state, config):
+    for event in app.stream(state, graph_config):
         if isinstance(event, tuple):
             # Some versions return (node, output) tuple
             # If output is a dict, we can get status/errors
@@ -134,11 +130,52 @@ def cmd_process(args):
                     print(f"  [{node}] done")
 
     # Get final state
-    final_state = app.get_state(config)
+    final_state = app.get_state(graph_config)
     print("-" * 50)
 
     if final_state.values.get("approval_status") == "PENDING":
-        print("\n⏸️  Waiting for approval. Use 'approve' or 'reject' command.")
+        print("\n" + "=" * 50)
+        print("📋 APPROVAL REQUIRED")
+        print("=" * 50)
+        
+        # Show draft for review
+        email_draft = final_state.values.get("email_draft", "No draft available")
+        email_subject = final_state.values.get("email_subject", "")
+        contact = job.get("contact_email", "N/A")
+        
+        print(f"\nTo: {contact}")
+        print(f"Subject: {email_subject}")
+        print(f"\n{'-' * 40}")
+        print(email_draft[:600] + ("..." if len(email_draft) > 600 else ""))
+        print(f"{'-' * 40}")
+        
+        # Interactive approval (only in non-CRON mode)
+        app_config = get_config()
+        if not app_config.cron_mode:
+            try:
+                response = input("\nApprove and send? [y/n]: ").strip().lower()
+                if response == 'y':
+                    from app.nodes.approval import approve_job
+                    if approve_job(job_id, "Approved via CLI"):
+                        print("✅ Approved! Resuming send flow...")
+                        # Resume graph processing
+                        for event in app.stream(None, graph_config):
+                            if isinstance(event, dict):
+                                for node, output in event.items():
+                                    if node != "__end__":
+                                        print(f"  [{node}] done")
+                        print("\n✅ Process complete!")
+                    else:
+                        print("❌ Approval failed")
+                else:
+                    print("\n⏸️  Not approved. Run 'approve <job_id>' later to continue.")
+            except EOFError:
+                # Non-interactive mode (e.g., piped input)
+                print("\n⏸️  Interactive approval not available.")
+                print(f"   Run: python -m app.main approve {job_id}")
+        else:
+            print("\n⚠️  CRON_MODE active - interactive approval disabled")
+            print(f"   Run: python -m app.main approve {job_id}")
     elif final_state.values.get("sent"):
         print("\n✅ Email sent successfully!")
     elif final_state.values.get("errors"):
@@ -263,7 +300,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     # Discover command
-    discover_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "discover",
         help="Discover jobs from legal sources",
     )
@@ -324,13 +361,13 @@ def main():
     )
 
     # Pending command
-    pending_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "pending",
         help="List pending approvals",
     )
 
     # Status command
-    status_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "status",
         help="Show overall status",
     )
@@ -344,6 +381,16 @@ def main():
         import logging
 
         logging.getLogger().setLevel(logging.DEBUG)
+
+    # CRON_MODE enforcement at CLI level
+    # Only allow safe, read-only commands when CRON_MODE is active
+    config = get_config()
+    CRON_ALLOWED_COMMANDS = {"discover", "list", "status"}
+
+    if config.cron_mode and args.command not in CRON_ALLOWED_COMMANDS:
+        print(f"❌ CRON_MODE is active - only {', '.join(CRON_ALLOWED_COMMANDS)} commands are allowed")
+        print("   Set CRON_MODE=false to enable processing commands")
+        sys.exit(1)
 
     # Route to command
     commands = {
@@ -364,6 +411,12 @@ def main():
             print("\nInterrupted")
             sys.exit(1)
         except Exception as e:
+            # Check for CronModeError (should not happen at CLI level, but defense in depth)
+            from app.nodes.guards import CronModeError
+            if isinstance(e, CronModeError):
+                print(f"\n❌ CRON_MODE blocked operation: {e.operation}")
+                print("   This operation is not allowed when CRON_MODE=true")
+                sys.exit(1)
             logger.exception("Command failed")
             print(f"\n❌ Error: {e}")
             sys.exit(1)

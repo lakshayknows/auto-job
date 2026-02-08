@@ -26,7 +26,7 @@ The scraper fetches jobs from:
 - **RemoteOK**: Public JSON API at `remoteok.com/api`
 - **Hacker News**: "Who is Hiring" posts via Firebase API
 
-### What Happens
+### Discovery Process
 
 1. Jobs are fetched from each source
 2. Only jobs matching target keywords (AI, ML, intern, fresher, etc.) are kept
@@ -35,7 +35,7 @@ The scraper fetches jobs from:
 5. Only emails with allowed prefixes (`careers@`, `jobs@`, `hr@`, etc.) are kept
 6. Jobs are saved to `data/jobs.json`
 
-### What Is Blocked
+### Blocked Operations
 
 - LinkedIn scraping (domain blocked)
 - Facebook, Twitter/X, Instagram (domains blocked)
@@ -53,7 +53,7 @@ The scraper fetches jobs from:
 2. Checks if job source is recognized (RemoteOK, HackerNews, etc.)
 3. If checks fail, job is marked for skip and goes to archive
 
-### Why This Exists
+### Purpose
 
 Some jobs may be discovered through allowed sources but link to blocked sites. This guard catches those cases.
 
@@ -62,7 +62,7 @@ Some jobs may be discovered through allowed sources but link to blocked sites. T
 **Node**: `source_guard`
 **File**: `app/nodes/guards.py`
 
-### What Happens
+### Legal Check Process
 
 1. Validates that the contact email has an appropriate prefix
 2. Personal emails are only allowed if `contact_type` is explicitly `HR`
@@ -77,21 +77,39 @@ Prevents sending cold emails to personal addresses that were not explicitly list
 **Node**: `cron_check`
 **File**: `app/graph.py`
 
-### What Happens
+### CRON Logic
 
 1. If `CRON_MODE=true` in environment, sets `should_skip=True`
-2. Also runs cost guard to check LLM call limits
+2. Routes job directly to archive, bypassing all LLM nodes
+3. Cost guard is **not evaluated** (no LLM = no cost tracking needed)
 
-### Why This Exists
+### Hard Circuit Breaker (Defense in Depth)
 
-CRON_MODE allows running the scraper on a schedule without accidentally triggering LLM calls or sending emails. Only discovery is allowed.
+Even if a job reaches an LLM node in CRON_MODE, each node has a **hard circuit breaker**:
+
+```python
+# In every LLM-using node
+assert_not_cron_mode("operation name")  # Raises CronModeError
+```
+
+This ensures violations are impossible to ignore.
+
+### CRON Purpose
+
+CRON_MODE is a **hard safety boundary**, not a soft preference. It allows scheduled job discovery without risk of:
+
+- Unexpected LLM costs
+- Accidental email sending
+- Unreviewed applications
+
+> See [CRON_MODE Documentation](cron-mode.md) for complete details.
 
 ## Step 5: RAG Context Retrieval
 
 **Node**: `rag`
 **File**: `app/nodes/rag.py`
 
-### What Happens
+### RAG Retrieval
 
 1. Loads base resume from `resume/base_resume.tex`
 2. Splits job description and resume into chunks
@@ -111,7 +129,7 @@ CRON_MODE allows running the scraper on a schedule without accidentally triggeri
 **Node**: `resume`
 **File**: `app/nodes/resume.py`
 
-### What Happens
+### Tailoring Logic
 
 1. Loads base resume LaTeX template
 2. Calls Gemini LLM to tailor resume for the job
@@ -125,7 +143,7 @@ CRON_MODE allows running the scraper on a schedule without accidentally triggeri
 
 LaTeX ensures deterministic, professional formatting. No HTML or image resumes are generated.
 
-### What Is Blocked
+### Resume Restrictions
 
 - If CRON_MODE is active, this node is skipped
 - If cached resume exists, LLM is not called
@@ -135,7 +153,7 @@ LaTeX ensures deterministic, professional formatting. No HTML or image resumes a
 **Node**: `email`
 **File**: `app/nodes/email.py`
 
-### What Happens
+### Drafting Logic
 
 1. Calls Gemini LLM to draft cold email
 2. Enforces 200-word limit (truncates if exceeded)
@@ -143,7 +161,7 @@ LaTeX ensures deterministic, professional formatting. No HTML or image resumes a
 4. Saves draft to `data/email_draft_{job_id}.json`
 5. Results are cached per job_id
 
-### What Is Blocked
+### Drafting Restrictions
 
 - If CRON_MODE is active, this node is skipped
 - If cached draft exists, LLM is not called
@@ -153,7 +171,7 @@ LaTeX ensures deterministic, professional formatting. No HTML or image resumes a
 **Node**: `approval`
 **File**: `app/nodes/approval.py`
 
-### What Happens
+### Approval Workflow
 
 1. Checks if approval already exists in `data/approvals.json`
 2. If not, logs the pending approval and pauses execution
@@ -178,7 +196,7 @@ This is the human-in-the-loop guarantee. No email can proceed without explicit h
 **Node**: `send_guard`
 **File**: `app/nodes/guards.py`
 
-### What Happens
+### Final Verification
 
 Performs final safety checks:
 
@@ -190,7 +208,7 @@ Performs final safety checks:
 
 If any check fails, sending is blocked and errors are logged.
 
-### Why This Exists
+### Guard Rationale
 
 Defense in depth. Even if approval is granted, all preconditions must be satisfied.
 
@@ -199,7 +217,7 @@ Defense in depth. Even if approval is granted, all preconditions must be satisfi
 **Node**: `sender`
 **File**: `app/nodes/sender.py`
 
-### What Happens
+### Sending Logic
 
 1. Creates MIME multipart message
 2. Attaches email body as plain text
@@ -208,7 +226,7 @@ Defense in depth. Even if approval is granted, all preconditions must be satisfi
 5. Sends email
 6. Logs sent email to `data/sent_emails.json`
 
-### What Is Blocked
+### Sending Restrictions
 
 - If CRON_MODE is active, sending is blocked
 - If approval status is not APPROVED, sending is blocked
@@ -219,13 +237,13 @@ Defense in depth. Even if approval is granted, all preconditions must be satisfi
 **Node**: `archive`
 **File**: `app/nodes/sender.py`
 
-### What Happens
+### Archiving Logic
 
 1. Saves final job state to `data/archive.json`
 2. Records approval status, sent flag, and any errors
 3. Adds timestamp
 
-### Why This Exists
+### Audit Purpose
 
 Creates an audit trail of all processed jobs.
 

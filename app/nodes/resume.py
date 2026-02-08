@@ -4,14 +4,9 @@ Tailors LaTeX resume for specific job roles using RAG context.
 Implements logic as defined in resume_tailor.md.
 """
 
-import hashlib
-import os
 import subprocess
 from pathlib import Path
 from typing import Optional
-
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.config import (
     PROMPTS_DIR,
@@ -20,6 +15,8 @@ from app.config import (
     get_logger,
 )
 from app.state import JobState
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 logger = get_logger("resume")
 
@@ -129,18 +126,16 @@ def tailor_resume(state: JobState) -> JobState:
 
     Returns:
         Updated state with resume paths
+
+    Raises:
+        CronModeError: If CRON_MODE is active (hard block)
     """
+    from app.nodes.guards import assert_not_cron_mode
+
+    # CRON_MODE: Hard circuit breaker - resume generation is blocked
+    assert_not_cron_mode("resume tailoring")
+
     config = get_config()
-
-    # Check CRON_MODE
-    if config.cron_mode:
-        logger.info("CRON_MODE active - skipping resume tailoring")
-        return {
-            **state,
-            "should_skip": True,
-            "skip_reason": "CRON_MODE active",
-        }
-
     job_id = state.get("job_id", "unknown")
     job_data = state.get("job_data", {})
     rag_context = state.get("rag_context", {})
@@ -226,7 +221,7 @@ Tailor this resume for the job. Return ONLY valid LaTeX.""",
             ]
         )
 
-        # Initialize LLM
+        # Initialize LLM (uses centralized Gemini 2.5 config)
         llm = ChatGoogleGenerativeAI(
             model=config.llm.model_name,
             google_api_key=config.llm.google_api_key,
