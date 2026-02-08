@@ -6,6 +6,7 @@ Implements safety checks as defined in:
 """
 
 from datetime import datetime
+from pathlib import Path
 from typing import Literal
 
 from app.config import get_config, get_logger
@@ -304,7 +305,7 @@ def cost_guard(state: JobState) -> JobState:
     return state
 
 
-def cron_mode_guard(state: JobState) -> JobState:
+def check_cron_mode(state: JobState) -> JobState:
     """Block LLM calls and sending in CRON_MODE.
 
     This is a soft guard that returns skip state. For hard enforcement,
@@ -321,8 +322,11 @@ def cron_mode_guard(state: JobState) -> JobState:
         return {
             **state,
             "should_skip": True,
-            "skip_reason": "CRON_MODE active",
+            "skip_reason": "CRON_MODE active - LLM blocked",
         }
 
     return state
 
+
+# Alias for backward compatibility
+cron_mode_guard = check_cron_mode

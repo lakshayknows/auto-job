@@ -422,11 +422,11 @@ def scrape_jobs(state: JobState) -> JobState:
         # Optimization: Check if job already exists locally
         req_id = state.get("job_id")
         jobs_file = DATA_DIR / "jobs.json"
-        
+
         if req_id and jobs_file.exists():
             with open(jobs_file, "r") as f:
                 existing_jobs = json.load(f)
-            
+
             # Find requested job
             match = next((j for j in existing_jobs if j["id"].startswith(req_id)), None)
             if match:
@@ -459,7 +459,7 @@ def scrape_jobs(state: JobState) -> JobState:
             logger.info(f"Found {len(new_unique_jobs)} new unique jobs")
             # Append new jobs to existing
             all_jobs = existing_jobs + new_unique_jobs
-            
+
             # Save updated list
             with open(jobs_file, "w") as f:
                 json.dump(all_jobs, f, indent=2)
@@ -471,9 +471,9 @@ def scrape_jobs(state: JobState) -> JobState:
                     job["company"],
                     f"{job['role']} ({job['contact_email']})",
                 )
-            
+
             logger.info(f"Saved {len(all_jobs)} total jobs to {jobs_file}")
-            
+
             # Use the first NEW job as the selected one, or fall back to last added
             selected_job = new_unique_jobs[0]
         else:
@@ -482,14 +482,14 @@ def scrape_jobs(state: JobState) -> JobState:
             if existing_jobs:
                 all_jobs = existing_jobs
                 selected_job = existing_jobs[-1]
-                # We still want to return a valid state to process maybe? 
+                # We still want to return a valid state to process maybe?
                 # Or if the user really wants NEW jobs, we might skip.
-                # For now, let's allow re-processing the last one if nothing new found, 
-                # UNLESS the user specifically asked for a new scrape. 
-                # But to avoid infinite loops of re-applying, let's just pick the last one 
+                # For now, let's allow re-processing the last one if nothing new found,
+                # UNLESS the user specifically asked for a new scrape.
+                # But to avoid infinite loops of re-applying, let's just pick the last one
                 # and let the pipeline decide (it likely checks 'sent' status elsewhere).
-                
-                # Actually, better to just return the filtered list of "jobs" (the new ones) 
+
+                # Actually, better to just return the filtered list of "jobs" (the new ones)
                 # as the operating set for this run.
             else:
                 all_jobs = existing_jobs
@@ -503,7 +503,7 @@ def scrape_jobs(state: JobState) -> JobState:
         # Return state with the selected job
         # Check if a specific job_id was requested
         req_id = state.get("job_id")
-        
+
         if req_id:
             # Find the requested job in the ALL list
             match = next((j for j in all_jobs if j["id"].startswith(req_id)), None)
@@ -511,7 +511,6 @@ def scrape_jobs(state: JobState) -> JobState:
                 selected_job = match
             else:
                 logger.warning(f"Requested job {req_id} not found in scrape results.")
-
 
             return {
                 **state,
