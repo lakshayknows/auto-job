@@ -80,11 +80,29 @@ Prevents sending cold emails to personal addresses that were not explicitly list
 ### What Happens
 
 1. If `CRON_MODE=true` in environment, sets `should_skip=True`
-2. Also runs cost guard to check LLM call limits
+2. Routes job directly to archive, bypassing all LLM nodes
+3. Cost guard is **not evaluated** (no LLM = no cost tracking needed)
+
+### Hard Circuit Breaker (Defense in Depth)
+
+Even if a job reaches an LLM node in CRON_MODE, each node has a **hard circuit breaker**:
+
+```python
+# In every LLM-using node
+assert_not_cron_mode("operation name")  # Raises CronModeError
+```
+
+This ensures violations are impossible to ignore.
 
 ### Why This Exists
 
-CRON_MODE allows running the scraper on a schedule without accidentally triggering LLM calls or sending emails. Only discovery is allowed.
+CRON_MODE is a **hard safety boundary**, not a soft preference. It allows scheduled job discovery without risk of:
+
+- Unexpected LLM costs
+- Accidental email sending
+- Unreviewed applications
+
+> See [CRON_MODE Documentation](cron-mode.md) for complete details.
 
 ## Step 5: RAG Context Retrieval
 

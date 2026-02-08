@@ -14,6 +14,59 @@ from app.state import JobState
 
 logger = get_logger("guards")
 
+
+# =============================================================================
+# CRON_MODE Enforcement (Hard Circuit Breaker)
+# =============================================================================
+
+
+class CronModeError(RuntimeError):
+    """Raised when a blocked operation is attempted in CRON_MODE.
+
+    CRON_MODE is a hard safety boundary, not a conditional branch.
+    This exception prevents silent failures and ensures violations are
+    impossible to ignore.
+    """
+
+    def __init__(self, operation: str):
+        self.operation = operation
+        super().__init__(f"CRON_MODE active - blocked operation: {operation}")
+
+
+def assert_not_cron_mode(operation: str) -> None:
+    """Assert that CRON_MODE is not active for blocked operations.
+
+    This is a hard circuit breaker. If CRON_MODE is active, execution
+    stops immediately with a clear error.
+
+    Args:
+        operation: Description of the blocked operation (for logging)
+
+    Raises:
+        CronModeError: If CRON_MODE is active
+    """
+    config = get_config()
+    if config.cron_mode:
+        logger.warning(f"CRON_MODE active - blocked operation: {operation}")
+        raise CronModeError(operation)
+
+
+def is_cron_mode() -> bool:
+    """Check if CRON_MODE is active.
+
+    Use this for conditional logic where you need to check without raising.
+
+    Returns:
+        True if CRON_MODE is active
+    """
+    config = get_config()
+    return config.cron_mode
+
+
+# =============================================================================
+# Legal and Source Guards
+# =============================================================================
+
 # Blocked domains for legal compliance
 BLOCKED_DOMAINS = [
     "linkedin.com",
@@ -213,12 +266,20 @@ def route_after_send_guard(state: JobState) -> Literal["pass", "fail"]:
 def cost_guard(state: JobState) -> JobState:
     """Check if cost limits have been exceeded.
 
+    NOTE: In CRON_MODE, this guard is explicitly disabled because
+    no LLM calls are made, so cost tracking is unnecessary.
+
     Args:
         state: Current job state
 
     Returns:
         Updated state with should_skip if limits exceeded
     """
+    # CRON_MODE: Explicitly disable cost guard (no LLM = no cost)
+    if is_cron_mode():
+        logger.debug("CRON_MODE active - cost guard disabled (no LLM calls)")
+        return state
+
     config = get_config()
     llm_calls = state.get("llm_calls", 0)
     total_tokens = state.get("total_tokens", 0)
@@ -247,15 +308,16 @@ def cost_guard(state: JobState) -> JobState:
 def cron_mode_guard(state: JobState) -> JobState:
     """Block LLM calls and sending in CRON_MODE.
 
+    This is a soft guard that returns skip state. For hard enforcement,
+    use assert_not_cron_mode() which raises CronModeError.
+
     Args:
         state: Current job state
 
     Returns:
         Updated state with should_skip if CRON_MODE active
     """
-    config = get_config()
-
-    if config.cron_mode:
+    if is_cron_mode():
         logger.info("CRON_MODE active - blocking LLM calls and sending")
         return {
             **state,
@@ -264,3 +326,4 @@ def cron_mode_guard(state: JobState) -> JobState:
         }
 
     return state
+

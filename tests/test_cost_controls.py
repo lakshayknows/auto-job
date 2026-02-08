@@ -15,6 +15,7 @@ class TestCostGuard:
     def test_cost_guard_allows_under_limit(self, mock_config, sample_state):
         """Test that under-limit calls are allowed."""
         mock_cfg = MagicMock()
+        mock_cfg.cron_mode = False  # Ensure cost guard runs
         mock_cfg.cost.max_llm_calls_per_run = 25
         mock_cfg.cost.max_tokens_per_run = 100000
         mock_config.return_value = mock_cfg
@@ -31,6 +32,7 @@ class TestCostGuard:
     def test_cost_guard_blocks_over_llm_limit(self, mock_config, sample_state):
         """Test that over-limit LLM calls are blocked."""
         mock_cfg = MagicMock()
+        mock_cfg.cron_mode = False  # Ensure cost guard runs
         mock_cfg.cost.max_llm_calls_per_run = 25
         mock_cfg.cost.max_tokens_per_run = 100000
         mock_config.return_value = mock_cfg
@@ -48,6 +50,7 @@ class TestCostGuard:
     def test_cost_guard_blocks_over_token_limit(self, mock_config, sample_state):
         """Test that over-limit token usage is blocked."""
         mock_cfg = MagicMock()
+        mock_cfg.cron_mode = False  # Ensure cost guard runs
         mock_cfg.cost.max_llm_calls_per_run = 25
         mock_cfg.cost.max_tokens_per_run = 100000
         mock_config.return_value = mock_cfg
