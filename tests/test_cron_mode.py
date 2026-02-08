@@ -19,8 +19,6 @@ These tests verify the invariants are enforced.
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.nodes.guards import (
     CronModeError,
     assert_not_cron_mode,
@@ -29,6 +27,7 @@ from app.nodes.guards import (
     is_cron_mode,
     send_guard,
 )
+import pytest
 
 
 # =============================================================================

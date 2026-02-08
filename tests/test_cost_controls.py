@@ -2,10 +2,9 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
+
 
 from app.nodes.guards import cost_guard, cron_mode_guard
-from app.state import JobState
 
 
 class TestCostGuard:

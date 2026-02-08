@@ -5,8 +5,7 @@ Implements safety checks as defined in:
 - send_guard.md (pre-send validation)
 """
 
-import os
-from pathlib import Path
+from datetime import datetime
 from typing import Literal
 
 from app.config import get_config, get_logger

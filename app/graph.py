@@ -10,18 +10,13 @@ This module defines the complete graph structure with:
 
 from typing import Literal
 
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, StateGraph
-
 from app.config import get_logger
 from app.nodes.approval import request_approval, route_after_approval
 from app.nodes.email import draft_email
 from app.nodes.guards import (
+    check_cron_mode,
     cost_guard,
-    is_cron_mode,
     legal_guard,
-    route_after_legal_guard,
-    route_after_send_guard,
     send_guard,
     source_guard,
 )
@@ -30,6 +25,8 @@ from app.nodes.resume import tailor_resume
 from app.nodes.scraper import scrape_jobs
 from app.nodes.sender import archive_job, send_email
 from app.state import JobState
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
 
 logger = get_logger("graph")
 

@@ -7,11 +7,10 @@ Implements logic as defined in email_writer.md.
 import json
 from pathlib import Path
 
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
-
 from app.config import DATA_DIR, PROMPTS_DIR, get_config, get_logger
 from app.state import JobState
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 logger = get_logger("email")
 

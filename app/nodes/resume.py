@@ -4,14 +4,9 @@ Tailors LaTeX resume for specific job roles using RAG context.
 Implements logic as defined in resume_tailor.md.
 """
 
-import hashlib
-import os
 import subprocess
 from pathlib import Path
 from typing import Optional
-
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.config import (
     PROMPTS_DIR,
@@ -20,6 +15,8 @@ from app.config import (
     get_logger,
 )
 from app.state import JobState
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 logger = get_logger("resume")
 

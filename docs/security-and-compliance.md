@@ -112,7 +112,7 @@ The approval mechanism is enforced at three levels:
 
 ### Approval Flow
 
-```
+```text
 [Email Drafted] --> [Approval Node] --> INTERRUPT
                                             |
                                     [Human Reviews]

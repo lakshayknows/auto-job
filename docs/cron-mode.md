@@ -140,13 +140,13 @@ $env:CRON_MODE="true"; python -m app.main discover
 
 1. **Check CLI Output**
 
-   ```
+   ```text
    CRON_MODE: 🔴 Active
    ```
 
 2. **Check Logs**
 
-   ```
+   ```text
    CRON_MODE active - blocking LLM operations
    ```
 
@@ -168,7 +168,7 @@ $env:CRON_MODE="true"; python -m app.main discover
 
 ### Windows (Task Scheduler)
 
-```
+```text
 Program: cmd.exe
 Arguments: /c "set CRON_MODE=true && cd C:\path\to\job-agent && python -m app.main discover"
 ```

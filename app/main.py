@@ -10,7 +10,6 @@ Provides command-line interface for:
 import argparse
 import json
 import sys
-from pathlib import Path
 
 from app.config import DATA_DIR, get_config, get_logger, setup_logging
 from app.graph import get_app
@@ -36,9 +35,6 @@ def load_jobs() -> list[dict]:
 def cmd_discover(args):
     """Discover jobs from legal sources."""
     logger.info("Starting job discovery...")
-
-    app = get_app()
-    config = {"configurable": {"thread_id": "discovery"}}
 
     # Run scraper node only
     initial_state = {
@@ -304,7 +300,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     # Discover command
-    discover_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "discover",
         help="Discover jobs from legal sources",
     )
@@ -365,13 +361,13 @@ def main():
     )
 
     # Pending command
-    pending_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "pending",
         help="List pending approvals",
     )
 
     # Status command
-    status_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "status",
         help="Show overall status",
     )
