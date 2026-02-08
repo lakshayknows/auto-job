@@ -137,25 +137,26 @@ def cmd_process(args):
         print("\n" + "=" * 50)
         print("📋 APPROVAL REQUIRED")
         print("=" * 50)
-        
+
         # Show draft for review
         email_draft = final_state.values.get("email_draft", "No draft available")
         email_subject = final_state.values.get("email_subject", "")
         contact = job.get("contact_email", "N/A")
-        
+
         print(f"\nTo: {contact}")
         print(f"Subject: {email_subject}")
         print(f"\n{'-' * 40}")
         print(email_draft[:600] + ("..." if len(email_draft) > 600 else ""))
         print(f"{'-' * 40}")
-        
+
         # Interactive approval (only in non-CRON mode)
         app_config = get_config()
         if not app_config.cron_mode:
             try:
                 response = input("\nApprove and send? [y/n]: ").strip().lower()
-                if response == 'y':
+                if response == "y":
                     from app.nodes.approval import approve_job
+
                     if approve_job(job_id, "Approved via CLI"):
                         print("✅ Approved! Resuming send flow...")
                         # Resume graph processing
@@ -168,7 +169,9 @@ def cmd_process(args):
                     else:
                         print("❌ Approval failed")
                 else:
-                    print("\n⏸️  Not approved. Run 'approve <job_id>' later to continue.")
+                    print(
+                        "\n⏸️  Not approved. Run 'approve <job_id>' later to continue."
+                    )
             except EOFError:
                 # Non-interactive mode (e.g., piped input)
                 print("\n⏸️  Interactive approval not available.")
@@ -388,7 +391,9 @@ def main():
     CRON_ALLOWED_COMMANDS = {"discover", "list", "status"}
 
     if config.cron_mode and args.command not in CRON_ALLOWED_COMMANDS:
-        print(f"❌ CRON_MODE is active - only {', '.join(CRON_ALLOWED_COMMANDS)} commands are allowed")
+        print(
+            f"❌ CRON_MODE is active - only {', '.join(CRON_ALLOWED_COMMANDS)} commands are allowed"
+        )
         print("   Set CRON_MODE=false to enable processing commands")
         sys.exit(1)
 
@@ -413,6 +418,7 @@ def main():
         except Exception as e:
             # Check for CronModeError (should not happen at CLI level, but defense in depth)
             from app.nodes.guards import CronModeError
+
             if isinstance(e, CronModeError):
                 print(f"\n❌ CRON_MODE blocked operation: {e.operation}")
                 print("   This operation is not allowed when CRON_MODE=true")

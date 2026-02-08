@@ -29,7 +29,6 @@ from app.nodes.guards import (
 )
 import pytest
 
-
 # =============================================================================
 # Test: CRON_MODE Detection Helpers
 # =============================================================================
@@ -352,7 +351,10 @@ class TestCLICronModeEnforcement:
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "CRON_ALLOWED_COMMANDS":
+                    if (
+                        isinstance(target, ast.Name)
+                        and target.id == "CRON_ALLOWED_COMMANDS"
+                    ):
                         found = True
                         break
 

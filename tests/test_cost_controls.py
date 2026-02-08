@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 
-
 from app.nodes.guards import cost_guard, cron_mode_guard
 
 

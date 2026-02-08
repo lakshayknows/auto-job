@@ -15,8 +15,9 @@ from app.nodes.approval import request_approval, route_after_approval
 from app.nodes.email import draft_email
 from app.nodes.guards import (
     check_cron_mode,
-    cost_guard,
     legal_guard,
+    route_after_legal_guard,
+    route_after_send_guard,
     send_guard,
     source_guard,
 )
@@ -45,30 +46,6 @@ def should_skip(state: JobState) -> Literal["continue", "skip"]:
         logger.info(f"Skipping job: {reason}")
         return "skip"
     return "continue"
-
-
-def check_cron_mode(state: JobState) -> JobState:
-    """Pre-check for CRON_MODE before LLM nodes.
-
-    In CRON_MODE, this sets should_skip=True which routes to archive.
-    The individual nodes also have hard circuit breakers (CronModeError)
-    as defense in depth.
-
-    Args:
-        state: Current job state
-
-    Returns:
-        Updated state with skip flag if CRON_MODE active
-    """
-    if is_cron_mode():
-        logger.info("CRON_MODE active - blocking LLM operations")
-        return {
-            **state,
-            "should_skip": True,
-            "skip_reason": "CRON_MODE active - LLM blocked",
-        }
-    # Only check cost limits when NOT in CRON_MODE
-    return cost_guard(state)
 
 
 def create_graph() -> StateGraph:
