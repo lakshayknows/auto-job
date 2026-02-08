@@ -190,7 +190,6 @@ def compile_graph(checkpointer=None):
     # Compile with interrupt before approval
     app = workflow.compile(
         checkpointer=checkpointer,
-        interrupt_before=["approval"],
     )
 
     logger.info("Graph compiled successfully")
