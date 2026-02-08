@@ -420,11 +420,10 @@ We welcome contributions! Please see [docs/contributing.md](docs/contributing.md
 - [ ] Email template customization
 - [ ] Multi-resume support
 - [ ] Application tracking dashboard
-
+- [ ] Auto-approval mode
 ### Not Planned
 
 - LinkedIn integration (legal concerns)
-- Auto-approval mode (defeats purpose)
 - Mass email sending (spam concerns)
 
 ---
