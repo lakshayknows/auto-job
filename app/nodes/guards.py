@@ -65,7 +65,7 @@ def legal_guard(state: JobState) -> JobState:
 
     # Check source is recognized
     source = job_data.get("source", "")
-    allowed_sources = ["RemoteOK", "HackerNews", "GoogleJobs", "Indeed", "AngelList"]
+    allowed_sources = ["RemoteOK", "HackerNews"]
 
     if source and source not in allowed_sources:
         logger.warning(f"Unrecognized source: {source}")
