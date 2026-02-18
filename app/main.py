@@ -49,14 +49,16 @@ def cmd_discover(args):
     # The scraper will save jobs to jobs.json
     from app.nodes.scraper import scrape_jobs
 
-    result = scrape_jobs(initial_state)
+    scrape_jobs(initial_state)
 
     jobs = load_jobs()
     print(f"\nDiscovered {len(jobs)} jobs")
 
     for i, job in enumerate(jobs[:10], 1):
         email_status = "✓" if job.get("contact_email") else "✗"
-        print(f"  {i}. [{email_status}] {job.get('company')} - {job.get('role')}")
+        company = job.get('company')
+        role = job.get('role')
+        print(f"  {i}. [{email_status}] {company} - {role}")
 
     if len(jobs) > 10:
         print(f"  ... and {len(jobs) - 10} more")
@@ -129,8 +131,12 @@ def cmd_run_all(args):
     if dry_run:
         print("\n🏃 Dry run — listing eligible jobs only:")
         for i, job in enumerate(eligible, 1):
-            print(f"  {i}. {job.get('company')} — {job.get('role')} ({job['id'][:8]}...)")
-        print(f"\nRun without --dry-run to process these {len(eligible)} jobs.")
+            company = job.get('company')
+            role = job.get('role')
+            jid = job['id'][:8]
+            print(f"  {i}. {company} — {role} ({jid}...)")
+        n = len(eligible)
+        print(f"\nRun without --dry-run to process these {n} jobs.")
         return
 
     # Step 3: Process each eligible job
@@ -163,7 +169,8 @@ def cmd_run_all(args):
             status = final_state.values.get("approval_status", "UNKNOWN")
 
             if status == "PENDING":
-                print(f"    📋 PENDING — run: python -m app.main approve {job_id[:8]}")
+                short_id = job_id[:8]
+                print(f"    📋 PENDING — approve: {short_id}")
                 processed += 1
             elif final_state.values.get("errors"):
                 print(f"    ❌ Errors: {final_state.values['errors']}")
@@ -174,7 +181,8 @@ def cmd_run_all(args):
 
         except Exception as e:
             print(f"    ❌ Failed: {e}")
-            logger.error(f"run-all failed for {job_id}: {traceback.format_exc()}")
+            tb = traceback.format_exc()
+            logger.error(f"run-all failed for {job_id}: {tb}")
             failed += 1
 
     # Summary
@@ -185,8 +193,8 @@ def cmd_run_all(args):
     print(f"  Failed:    {failed}")
     print(f"  Skipped:   {len(jobs) - len(eligible)}")
     if processed > 0:
-        print(f"\n📋 Review pending jobs: python -m app.main pending")
-        print(f"   Approve a job:       python -m app.main approve <job_id>")
+        print("\n📋 Review pending: python -m app.main pending")
+        print("   Approve a job:  python -m app.main approve <id>")
 
 
 def find_job_by_id(jobs: list[dict], job_id: str) -> dict | None:
@@ -267,7 +275,9 @@ def cmd_process(args):
         print("=" * 50)
 
         # Show draft for review
-        email_draft = final_state.values.get("email_draft", "No draft available")
+        email_draft = final_state.values.get(
+            "email_draft", "No draft available"
+        )
         email_subject = final_state.values.get("email_subject", "")
         contact = job.get("contact_email", "N/A")
 
@@ -298,7 +308,8 @@ def cmd_process(args):
                         print("❌ Approval failed")
                 else:
                     print(
-                        "\n⏸️  Not approved. Run 'approve <job_id>' later to continue."
+                        "\n⏸️  Not approved."
+                        " Run 'approve <job_id>' later."
                     )
             except EOFError:
                 # Non-interactive mode (e.g., piped input)
@@ -412,7 +423,8 @@ def cmd_list(args):
         print(f"{job_id:<10} {company:<20} {role:<25} {email:<15}")
 
     if len(jobs) > args.limit:
-        print(f"\n... and {len(jobs) - args.limit} more (use --limit to see more)")
+        remaining = len(jobs) - args.limit
+        print(f"\n... and {remaining} more (use --limit)")
 
 
 def main():
@@ -530,8 +542,9 @@ def main():
     CRON_ALLOWED_COMMANDS = {"discover", "list", "status"}
 
     if config.cron_mode and args.command not in CRON_ALLOWED_COMMANDS:
+        allowed = ', '.join(CRON_ALLOWED_COMMANDS)
         print(
-            f"❌ CRON_MODE is active - only {', '.join(CRON_ALLOWED_COMMANDS)} commands are allowed"
+            f"❌ CRON_MODE active - only {allowed} allowed"
         )
         print("   Set CRON_MODE=false to enable processing commands")
         sys.exit(1)
@@ -556,7 +569,7 @@ def main():
             print("\nInterrupted")
             sys.exit(1)
         except Exception as e:
-            # Check for CronModeError (should not happen at CLI level, but defense in depth)
+            # Check for CronModeError (defense in depth)
             from app.nodes.guards import CronModeError
 
             if isinstance(e, CronModeError):
