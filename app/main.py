@@ -56,8 +56,8 @@ def cmd_discover(args):
 
     for i, job in enumerate(jobs[:10], 1):
         email_status = "✓" if job.get("contact_email") else "✗"
-        company = job.get('company')
-        role = job.get('role')
+        company = job.get("company")
+        role = job.get("role")
         print(f"  {i}. [{email_status}] {company} - {role}")
 
     if len(jobs) > 10:
@@ -107,6 +107,7 @@ def cmd_run_all(args):
             sent = json.load(f)
 
     from app.nodes.approval import load_approvals
+
     approvals = load_approvals()
 
     eligible = []
@@ -131,9 +132,9 @@ def cmd_run_all(args):
     if dry_run:
         print("\n🏃 Dry run — listing eligible jobs only:")
         for i, job in enumerate(eligible, 1):
-            company = job.get('company')
-            role = job.get('role')
-            jid = job['id'][:8]
+            company = job.get("company")
+            role = job.get("role")
+            jid = job["id"][:8]
             print(f"  {i}. {company} — {role} ({jid}...)")
         n = len(eligible)
         print(f"\nRun without --dry-run to process these {n} jobs.")
@@ -275,9 +276,7 @@ def cmd_process(args):
         print("=" * 50)
 
         # Show draft for review
-        email_draft = final_state.values.get(
-            "email_draft", "No draft available"
-        )
+        email_draft = final_state.values.get("email_draft", "No draft available")
         email_subject = final_state.values.get("email_subject", "")
         contact = job.get("contact_email", "N/A")
 
@@ -307,10 +306,7 @@ def cmd_process(args):
                     else:
                         print("❌ Approval failed")
                 else:
-                    print(
-                        "\n⏸️  Not approved."
-                        " Run 'approve <job_id>' later."
-                    )
+                    print("\n⏸️  Not approved." " Run 'approve <job_id>' later.")
             except EOFError:
                 # Non-interactive mode (e.g., piped input)
                 print("\n⏸️  Interactive approval not available.")
@@ -542,10 +538,8 @@ def main():
     CRON_ALLOWED_COMMANDS = {"discover", "list", "status"}
 
     if config.cron_mode and args.command not in CRON_ALLOWED_COMMANDS:
-        allowed = ', '.join(CRON_ALLOWED_COMMANDS)
-        print(
-            f"❌ CRON_MODE active - only {allowed} allowed"
-        )
+        allowed = ", ".join(CRON_ALLOWED_COMMANDS)
+        print(f"❌ CRON_MODE active - only {allowed} allowed")
         print("   Set CRON_MODE=false to enable processing commands")
         sys.exit(1)
 
