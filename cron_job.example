@@ -14,12 +14,25 @@
 #
 # =============================================================================
 
+# =============================================================================
+# OPTION A: Discover-only (read-only, no LLM, no emails)
+# =============================================================================
 # Run job discovery every 6 hours
 # This scrapes RemoteOK and HackerNews for new AI/ML job listings
 0 */6 * * * CRON_MODE=true /path/to/python -m app.main discover >> /var/log/autojob/discover.log 2>&1
 
 # Alternative: Run discovery at specific times (9am, 3pm, 9pm)
 # 0 9,15,21 * * * CRON_MODE=true /path/to/python -m app.main discover >> /var/log/autojob/discover.log 2>&1
+
+# =============================================================================
+# OPTION B: Full pipeline (discover + resume + email draft, NO sending)
+# =============================================================================
+# Discovers jobs, generates tailored resumes and email drafts for each.
+# Jobs land in PENDING state — you manually approve and send later.
+# NOTE: Do NOT set CRON_MODE=true here — it would block LLM/resume generation.
+#
+# Run full pipeline every Monday at 9 AM
+0 9 * * 1 cd /path/to/auto-job && /path/to/python -m app.main run-all >> /var/log/autojob/run_all.log 2>&1
 
 # =============================================================================
 # IMPORTANT NOTES

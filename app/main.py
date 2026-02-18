@@ -10,6 +10,7 @@ Provides command-line interface for:
 import argparse
 import json
 import sys
+import traceback
 
 from app.config import DATA_DIR, get_config, get_logger, setup_logging
 from app.graph import get_app
@@ -59,6 +60,133 @@ def cmd_discover(args):
 
     if len(jobs) > 10:
         print(f"  ... and {len(jobs) - 10} more")
+
+
+def cmd_run_all(args):
+    """Discover jobs and process each through resume + email (no sending).
+
+    Runs the full pipeline up to the approval gate:
+    1. Discover new jobs (scrape)
+    2. For each eligible job: RAG → resume → email draft → PENDING
+    3. Stops at PENDING — user manually approves and sends later
+    """
+    dry_run = getattr(args, "dry_run", False)
+
+    # Step 1: Discover jobs
+    print("=" * 50)
+    print("Step 1: Discovering jobs...")
+    print("=" * 50)
+    from app.nodes.scraper import scrape_jobs
+
+    initial_state = {
+        "job_id": "",
+        "job_data": {},
+        "errors": [],
+        "llm_calls": 0,
+        "total_tokens": 0,
+    }
+    scrape_jobs(initial_state)
+
+    # Step 2: Load jobs and determine which to process
+    jobs = load_jobs()
+    print(f"\nTotal discovered jobs: {len(jobs)}")
+
+    # Load already-processed data to skip duplicates
+    archive_file = DATA_DIR / "archive.json"
+    archive = {}
+    if archive_file.exists():
+        with open(archive_file, "r") as f:
+            archive = json.load(f)
+
+    sent_file = DATA_DIR / "sent_emails.json"
+    sent = {}
+    if sent_file.exists():
+        with open(sent_file, "r") as f:
+            sent = json.load(f)
+
+    from app.nodes.approval import load_approvals
+    approvals = load_approvals()
+
+    eligible = []
+    for job in jobs:
+        jid = job.get("id", "")
+        if not job.get("contact_email"):
+            continue
+        if jid in archive:
+            continue
+        if jid in sent:
+            continue
+        if jid in approvals:
+            continue
+        eligible.append(job)
+
+    print(f"Eligible jobs to process: {len(eligible)}")
+
+    if not eligible:
+        print("\n✅ No new jobs to process.")
+        return
+
+    if dry_run:
+        print("\n🏃 Dry run — listing eligible jobs only:")
+        for i, job in enumerate(eligible, 1):
+            print(f"  {i}. {job.get('company')} — {job.get('role')} ({job['id'][:8]}...)")
+        print(f"\nRun without --dry-run to process these {len(eligible)} jobs.")
+        return
+
+    # Step 3: Process each eligible job
+    print("\n" + "=" * 50)
+    print("Step 2: Processing jobs (resume + email draft)...")
+    print("=" * 50)
+
+    app = get_app()
+    processed = 0
+    failed = 0
+
+    for i, job in enumerate(eligible, 1):
+        job_id = job["id"]
+        company = job.get("company", "Unknown")
+        role = job.get("role", "Unknown")
+        print(f"\n[{i}/{len(eligible)}] {company} — {role} ({job_id[:8]}...)")
+
+        try:
+            state = create_initial_state(job_id, job)
+            graph_config = {"configurable": {"thread_id": job_id}}
+
+            for event in app.stream(state, graph_config):
+                if isinstance(event, dict):
+                    for node, output in event.items():
+                        if node != "__end__":
+                            print(f"    [{node}] done")
+
+            # Check final state
+            final_state = app.get_state(graph_config)
+            status = final_state.values.get("approval_status", "UNKNOWN")
+
+            if status == "PENDING":
+                print(f"    📋 PENDING — run: python -m app.main approve {job_id[:8]}")
+                processed += 1
+            elif final_state.values.get("errors"):
+                print(f"    ❌ Errors: {final_state.values['errors']}")
+                failed += 1
+            else:
+                print(f"    ✓ Status: {status}")
+                processed += 1
+
+        except Exception as e:
+            print(f"    ❌ Failed: {e}")
+            logger.error(f"run-all failed for {job_id}: {traceback.format_exc()}")
+            failed += 1
+
+    # Summary
+    print("\n" + "=" * 50)
+    print("Summary")
+    print("=" * 50)
+    print(f"  Processed: {processed}")
+    print(f"  Failed:    {failed}")
+    print(f"  Skipped:   {len(jobs) - len(eligible)}")
+    if processed > 0:
+        print(f"\n📋 Review pending jobs: python -m app.main pending")
+        print(f"   Approve a job:       python -m app.main approve <job_id>")
 
 
 def find_job_by_id(jobs: list[dict], job_id: str) -> dict | None:
@@ -308,6 +436,17 @@ def main():
         help="Discover jobs from legal sources",
     )
 
+    # Run-all command (discover + resume + email)
+    run_all_parser = subparsers.add_parser(
+        "run-all",
+        help="Discover jobs and generate resume + email for each (no sending)",
+    )
+    run_all_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="List eligible jobs without processing them",
+    )
+
     # List command
     list_parser = subparsers.add_parser(
         "list",
@@ -400,6 +539,7 @@ def main():
     # Route to command
     commands = {
         "discover": cmd_discover,
+        "run-all": cmd_run_all,
         "list": cmd_list,
         "process": cmd_process,
         "approve": cmd_approve,

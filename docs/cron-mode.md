@@ -220,6 +220,35 @@ The CRON_MODE design follows these principles:
 
 **Solution**: Update to latest version with explicit CRON_MODE check.
 
+## Alternative: Full Pipeline with `run-all`
+
+If you want your cron job to **discover + generate resumes + draft emails** (not just discover), use the `run-all` command **without** `CRON_MODE=true`:
+
+```cron
+# Full pipeline every Monday at 9 AM
+0 9 * * 1 cd /path/to/auto-job && /path/to/python -m app.main run-all >> /var/log/autojob/run_all.log 2>&1
+```
+
+This will:
+- Scrape jobs from public sources
+- Generate tailored resumes via LLM
+- Draft personalized emails via LLM
+- Stop at **PENDING** — no emails are sent automatically
+
+You then manually review and approve:
+```bash
+python -m app.main pending       # List pending jobs
+python -m app.main approve <id>  # Approve and send
+```
+
+Use `--dry-run` to preview which jobs would be processed:
+```bash
+python -m app.main run-all --dry-run
+```
+
+> [!WARNING]
+> Do NOT set `CRON_MODE=true` with `run-all`. CRON_MODE blocks LLM calls and would prevent resume/email generation.
+
 ## Related Documentation
 
 - [How It Works](how-it-works.md) - Full pipeline explanation
